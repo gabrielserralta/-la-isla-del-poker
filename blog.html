@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog · La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .post-card {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      padding: 1.75rem;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .post-card:hover { border-color: rgba(201,168,76,0.4); }
+    .post-fecha { font-size: 0.78rem; color: var(--texto2); text-transform: uppercase; letter-spacing: 0.08em; }
+    .post-titulo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--oro); margin: 0.4rem 0 0.75rem; }
+    .post-preview { color: var(--texto2); font-size: 0.9rem; line-height: 1.7; }
+    .post-full { display: none; }
+    .post-full.open { display: block; }
+    .post-body { white-space: pre-wrap; color: var(--texto); font-size: 0.92rem; line-height: 1.8; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Blog</h1>
+    <p>Noticias y crónicas de La Isla</p>
+  </div>
+</div>
+
+<main class="container section">
+  <div id="posts" style="display:flex;flex-direction:column;gap:1.25rem;">
+    <div class="loading"></div>
+  </div>
+</main>
+
+<footer><strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣</footer>
+<div id="toast"></div>
+
+<script type="module">
+import { query, marcarNavActivo } from './db.js';
+marcarNavActivo();
+
+async function cargarBlog() {
+  const el = document.getElementById('posts');
+  try {
+    const data = await query('blog', 'publicado=eq.true&order=publicado_en.desc');
+    if (!data.length) {
+      el.innerHTML = '<p class="empty">Sin entradas publicadas todavía.</p>';
+      return;
+    }
+    el.innerHTML = data.map((b, i) => {
+      const fecha = b.publicado_en
+        ? new Date(b.publicado_en).toLocaleDateString('es-AR', {day:'numeric',month:'long',year:'numeric'})
+        : '';
+      const preview = b.contenido.slice(0, 180) + (b.contenido.length > 180 ? '…' : '');
+      return `
+        <article class="post-card" onclick="togglePost(${i})">
+          <div class="post-fecha">${fecha}</div>
+          <h2 class="post-titulo">${b.titulo}</h2>
+          <div class="post-preview" id="prev-${i}">${preview}</div>
+          <div class="post-full" id="full-${i}">
+            <div class="post-body">${b.contenido}</div>
+            <div style="margin-top:1rem;">
+              <span style="font-size:0.82rem;color:var(--texto2);">Clic para cerrar</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<p class="empty">Error cargando el blog.</p>';
+  }
+}
+
+window.togglePost = function(i) {
+  const prev = document.getElementById(`prev-${i}`);
+  const full = document.getElementById(`full-${i}`);
+  const isOpen = full.classList.contains('open');
+  full.classList.toggle('open', !isOpen);
+  prev.style.display = isOpen ? '' : 'none';
+};
+
+cargarBlog();
+</script>
+
+</body>
+</html>

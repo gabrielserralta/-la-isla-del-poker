@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Estadísticas · La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Estadísticas</h1>
+    <p>Cajas, rebuys y recaudación histórica</p>
+  </div>
+</div>
+
+<main class="container">
+  <section class="section">
+
+    <!-- STATS GLOBALES -->
+    <div id="stats-globales" class="stat-grid"></div>
+
+    <!-- TABS -->
+    <div class="tabs" style="margin-bottom:1.5rem;">
+      <button class="tab-btn active" data-tab="torneos">Por torneo</button>
+      <button class="tab-btn" data-tab="jugadores">Por jugador</button>
+    </div>
+
+    <!-- POR TORNEO -->
+    <div id="tab-torneos">
+      <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1.25rem;">
+        <label style="text-transform:none;font-size:0.85rem;color:var(--texto2);margin:0;">Año:</label>
+        <select id="sel-anio" style="width:auto;padding:0.4rem 0.75rem;font-size:0.85rem;"></select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="tabla-torneos"><div class="loading"></div></div>
+      </div>
+    </div>
+
+    <!-- POR JUGADOR -->
+    <div id="tab-jugadores" style="display:none;">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="tabla-jugadores"><div class="loading"></div></div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<footer>
+  <strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣
+</footer>
+
+<div id="toast"></div>
+
+<script type="module">
+import { query, formatNum, marcarNavActivo } from './db.js';
+
+marcarNavActivo();
+
+const anioActual = new Date().getFullYear();
+const selAnio = document.getElementById('sel-anio');
+for (let y = anioActual; y >= 2020; y--) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  selAnio.appendChild(o);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tab-torneos').style.display  = tab === 'torneos'   ? '' : 'none';
+    document.getElementById('tab-jugadores').style.display = tab === 'jugadores' ? '' : 'none';
+  });
+});
+
+// ── Stats globales ────────────────────────────────────────────
+async function cargarGlobales() {
+  const el = document.getElementById('stats-globales');
+  try {
+    const data = await query('v_stats_cajas', 'select=cajas_total,rebuys_total,jugadores,recaudado');
+    const totalCajas    = data.reduce((s, r) => s + Number(r.cajas_total || 0), 0);
+    const totalRebuys   = data.reduce((s, r) => s + Number(r.rebuys_total || 0), 0);
+    const totalTorneos  = data.length;
+    const totalRec      = data.reduce((s, r) => s + Number(r.recaudado || 0), 0);
+
+    el.innerHTML = `
+      <div class="stat-box"><div class="num">${totalTorneos}</div><div class="lbl">Torneos jugados</div></div>
+      <div class="stat-box"><div class="num">${formatNum(totalCajas)}</div><div class="lbl">Cajas totales</div></div>
+      <div class="stat-box"><div class="num">${formatNum(totalRebuys)}</div><div class="lbl">Rebuys totales</div></div>
+      <div class="stat-box"><div class="num">$${formatNum(totalRec)}</div><div class="lbl">Recaudado histórico</div></div>
+    `;
+  } catch(e) { el.innerHTML = ''; }
+}
+
+// ── Por torneo ────────────────────────────────────────────────
+async function cargarTorneos(anio) {
+  const el = document.getElementById('tabla-torneos');
+  el.innerHTML = '<div class="loading"></div>';
+  try {
+    const data = await query('v_stats_cajas',
+      `anio=eq.${anio}&order=fecha.desc`
+    );
+
+    if (!data.length) {
+      el.innerHTML = `<p class="empty">Sin datos para ${anio}.</p>`;
+      return;
+    }
+
+    const filas = data.map(r => `
+      <tr>
+        <td style="font-size:0.85rem;color:var(--texto2);">${new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-AR', {day:'numeric', month:'short'})}</td>
+        <td>${r.torneo}</td>
+        <td style="text-align:right;">${r.jugadores || 0}</td>
+        <td style="text-align:right;">${formatNum(r.cajas_total)}</td>
+        <td style="text-align:right;color:var(--texto2);">${formatNum(r.rebuys_total)}</td>
+        <td style="text-align:right;color:var(--oro);">$${formatNum(r.recaudado)}</td>
+      </tr>
+    `).join('');
+
+    const totCajas  = data.reduce((s, r) => s + Number(r.cajas_total || 0), 0);
+    const totRebuys = data.reduce((s, r) => s + Number(r.rebuys_total || 0), 0);
+    const totRec    = data.reduce((s, r) => s + Number(r.recaudado || 0), 0);
+
+    el.innerHTML = `
+      <table class="tabla-ranking" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Torneo</th>
+            <th style="text-align:right">Jugadores</th>
+            <th style="text-align:right">Cajas</th>
+            <th style="text-align:right">Rebuys</th>
+            <th style="text-align:right">Recaudado</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--borde);">
+            <td colspan="2" style="padding:0.75rem 1rem;color:var(--texto2);font-size:0.85rem;">Total ${anio}</td>
+            <td></td>
+            <td style="text-align:right;padding:0.75rem 1rem;font-weight:500;">${formatNum(totCajas)}</td>
+            <td style="text-align:right;padding:0.75rem 1rem;color:var(--texto2);">${formatNum(totRebuys)}</td>
+            <td style="text-align:right;padding:0.75rem 1rem;color:var(--oro);font-weight:600;">$${formatNum(totRec)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p class="empty">Error cargando datos.</p>`;
+  }
+}
+
+// ── Por jugador ───────────────────────────────────────────────
+async function cargarJugadores() {
+  const el = document.getElementById('tabla-jugadores');
+  el.innerHTML = '<div class="loading"></div>';
+  try {
+    const data = await query('v_stats_cajas_jugador',
+      `order=cajas_total.desc`
+    );
+
+    if (!data.length) {
+      el.innerHTML = `<p class="empty">Sin datos todavía.</p>`;
+      return;
+    }
+
+    const maxCajas = data[0].cajas_total || 1;
+
+    const filas = data.map((r, i) => {
+      const pct = Math.round((r.cajas_total / maxCajas) * 100);
+      return `<tr>
+        <td style="width:30px;color:var(--texto2);">${i+1}</td>
+        <td>${r.apodo || r.nombre}</td>
+        <td style="text-align:right;">${r.torneos_jugados}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:50px;">
+              <div style="width:${pct}%;height:100%;background:var(--verde-claro);border-radius:3px;"></div>
+            </div>
+            <span style="min-width:30px;text-align:right;">${formatNum(r.cajas_total)}</span>
+          </div>
+        </td>
+        <td style="text-align:right;color:var(--texto2);">${formatNum(r.rebuys_total)}</td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.promedio_rebuys}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <table class="tabla-ranking" style="width:100%;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jugador</th>
+            <th style="text-align:right">Torneos</th>
+            <th>Cajas totales</th>
+            <th style="text-align:right">Rebuys</th>
+            <th style="text-align:right">Prom. rebuy</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p class="empty">Error cargando datos.</p>`;
+  }
+}
+
+selAnio.addEventListener('change', () => cargarTorneos(selAnio.value));
+
+cargarGlobales();
+cargarTorneos(anioActual);
+cargarJugadores();
+</script>
+
+</body>
+</html>

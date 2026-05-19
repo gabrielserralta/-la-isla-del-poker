@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin · La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 1.5rem;
+      min-height: 60vh;
+    }
+    .admin-menu {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: var(--radio);
+      padding: 0.75rem;
+      height: fit-content;
+      position: sticky;
+      top: 80px;
+    }
+    .admin-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--texto2);
+      padding: 0.6rem 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.875rem;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+    .admin-menu button:hover { background: rgba(255,255,255,0.05); color: var(--texto); }
+    .admin-menu button.active { background: var(--verde-oscuro); color: var(--verde-claro); font-weight: 500; }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--oro);
+      margin-bottom: 1.25rem;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .lista-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.88rem;
+    }
+    .lista-item:last-child { border-bottom: none; }
+    @media(max-width:640px) {
+      .admin-grid { grid-template-columns: 1fr; }
+      .admin-menu { position: static; display: flex; flex-wrap: wrap; gap: 4px; }
+      .admin-menu button { width: auto; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:flex;align-items:center;justify-content:center;min-height:80vh;">
+  <div class="card" style="width:320px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:1rem;">🔐</div>
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);margin-bottom:1.5rem;">Panel Admin</h2>
+    <div class="form-group">
+      <label>PIN de acceso</label>
+      <input type="password" id="login-pin" placeholder="••••••" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Ingresar</button>
+    <p id="login-err" style="color:#e06060;font-size:0.82rem;margin-top:0.75rem;display:none;">PIN incorrecto</p>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="admin-screen" style="display:none;">
+  <div class="page-header">
+    <div class="container" style="display:flex;justify-content:space-between;align-items:flex-end;">
+      <div>
+        <h1>Panel de Administración</h1>
+        <p>Cargá torneos, resultados y más</p>
+      </div>
+      <button class="btn btn-ghost" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <main class="container section">
+    <div class="admin-grid">
+
+      <!-- MENÚ -->
+      <nav class="admin-menu">
+        <button class="active" onclick="showPanel('torneos')">🗓 Torneos</button>
+        <button onclick="showPanel('resultados')">🏆 Resultados</button>
+        <button onclick="showPanel('cajas')">💰 Cajas</button>
+        <button onclick="showPanel('jugadores')">👤 Jugadores</button>
+        <button onclick="showPanel('blog')">📝 Blog</button>
+      </nav>
+
+      <!-- PANELS -->
+      <div>
+
+        <!-- TORNEOS -->
+        <div id="panel-torneos" class="admin-panel active">
+          <div class="panel-title">Torneos</div>
+          <div class="card" style="margin-bottom:1.5rem;">
+            <h3 style="margin-bottom:1rem;font-size:1rem;color:var(--texto2);">Nuevo torneo</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="t-nombre" placeholder="Ej: Jueves 12 - Torneo Verano">
+              </div>
+              <div class="form-group">
+                <label>Fecha</label>
+                <input type="date" id="t-fecha">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Monto buy-in ($)</label>
+                <input type="number" id="t-buyin" placeholder="0" min="0">
+              </div>
+              <div class="form-group">
+                <label>Estado</label>
+                <select id="t-estado">
+                  <option value="proximo">Próximo</option>
+                  <option value="en_curso">En curso</option>
+                  <option value="finalizado">Finalizado</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;">
+                <input type="checkbox" id="t-doble" style="width:auto;"> Jueves DOBLE (pool × 2)
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Descripción (opcional)</label>
+              <textarea id="t-desc" rows="2" placeholder="Notas del torneo..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="guardarTorneo()">Guardar torneo</button>
+          </div>
+
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div id="lista-torneos"><div class="loading"></div></div>
+          </div>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div id="panel-resultados" class="admin-panel">
+          <div class="panel-title">Cargar resultados</div>
+          <div class="card" style="margin-bottom:1.5rem;">
+            <div class="form-group">
+              <label>Torneo</label>
+              <select id="r-torneo"><option value="">— Seleccionar torneo —</option></select>
+            </div>
+            <div id="r-info" style="font-size:0.82rem;color:var(--texto2);margin-bottom:1rem;display:none;"></div>
+            <div id="r-jugadores-lista"></div>
+            <button class="btn btn-primary" onclick="guardarResultados()" style="margin-top:1rem;">Guardar todos los resultados</button>
+          </div>
+        </div>
+
+        <!-- CAJAS -->
+        <div id="panel-cajas" class="admin-panel">
+          <div class="panel-title">Cajas por torneo</div>
+          <div class="card" style="margin-bottom:1.5rem;">
+            <div class="form-group">
+              <label>Torneo</label>
+              <select id="c-torneo"><option value="">— Seleccionar torneo —</option></select>
+            </div>
+            <div id="c-jugadores-lista"></div>
+            <button class="btn btn-primary" onclick="guardarCajas()" style="margin-top:1rem;">Guardar cajas</button>
+          </div>
+        </div>
+
+        <!-- JUGADORES -->
+        <div id="panel-jugadores" class="admin-panel">
+          <div class="panel-title">Jugadores</div>
+          <div class="card" style="margin-bottom:1.5rem;">
+            <h3 style="margin-bottom:1rem;font-size:1rem;color:var(--texto2);">Nuevo jugador</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre completo</label>
+                <input type="text" id="j-nombre" placeholder="Roberto Bellatti">
+              </div>
+              <div class="form-group">
+                <label>Apodo (opcional)</label>
+                <input type="text" id="j-apodo" placeholder="Roby">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>PIN de acceso (alfanumérico)</label>
+                <input type="text" id="j-pin" placeholder="Ej: ROBY42X" maxlength="12" style="text-transform:uppercase;" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label>Año de inicio</label>
+                <input type="number" id="j-inicio" placeholder="2024" min="2020" max="2099">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="guardarJugador()">Agregar jugador</button>
+          </div>
+
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div id="lista-jugadores"><div class="loading"></div></div>
+          </div>
+        </div>
+
+        <!-- BLOG -->
+        <div id="panel-blog" class="admin-panel">
+          <div class="panel-title">Blog</div>
+          <div class="card" style="margin-bottom:1.5rem;">
+            <div class="form-group">
+              <label>Título</label>
+              <input type="text" id="b-titulo" placeholder="Gran noche en La Isla...">
+            </div>
+            <div class="form-group">
+              <label>Contenido</label>
+              <textarea id="b-contenido" rows="6" placeholder="Escribí la entrada del blog..."></textarea>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;">
+                <input type="checkbox" id="b-publicado" style="width:auto;"> Publicar ahora
+              </label>
+            </div>
+            <button class="btn btn-primary" onclick="guardarBlog()">Guardar entrada</button>
+          </div>
+
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div id="lista-blog"><div class="loading"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣
+</footer>
+
+<div id="toast"></div>
+
+<script type="module">
+import { query, insert, update, remove, toast, isAdmin, loginAdmin, logoutAdmin, marcarNavActivo } from './db.js';
+
+marcarNavActivo();
+
+// ── Auth ──────────────────────────────────────────────────────
+window.doLogin = function() {
+  const pin = document.getElementById('login-pin').value.trim().toUpperCase();
+  if (loginAdmin(pin)) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    initAdmin();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+  }
+};
+
+window.doLogout = function() {
+  logoutAdmin();
+  location.reload();
+};
+
+document.getElementById('login-pin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+if (isAdmin()) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  initAdmin();
+}
+
+// ── Navegación de paneles ─────────────────────────────────────
+window.showPanel = function(id) {
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.admin-menu button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`panel-${id}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+};
+
+// ── Estado compartido ─────────────────────────────────────────
+let torneos = [], jugadores = [];
+
+async function initAdmin() {
+  await Promise.all([cargarTorneos(), cargarJugadores()]);
+  cargarBlog();
+  poblarSelectores();
+}
+
+// ── TORNEOS ───────────────────────────────────────────────────
+async function cargarTorneos() {
+  const el = document.getElementById('lista-torneos');
+  try {
+    torneos = await query('torneos', 'order=fecha.desc');
+    if (!torneos.length) { el.innerHTML = '<p class="empty">Sin torneos.</p>'; return; }
+    el.innerHTML = torneos.map(t => `
+      <div class="lista-item">
+        <div>
+          <div style="font-weight:500;">${t.nombre}</div>
+          <div style="font-size:0.8rem;color:var(--texto2);">
+            ${new Date(t.fecha+'T12:00:00').toLocaleDateString('es-AR')}
+            ${t.es_doble ? ' · <span style="color:var(--oro);">DOBLE</span>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <span class="badge ${t.estado==='finalizado'?'badge-verde':t.estado==='en_curso'?'badge-oro':'badge-rojo'}">${t.estado}</span>
+          <select style="width:auto;padding:0.25rem 0.5rem;font-size:0.8rem;" onchange="cambiarEstado('${t.id}',this.value)">
+            <option value="proximo" ${t.estado==='proximo'?'selected':''}>Próximo</option>
+            <option value="en_curso" ${t.estado==='en_curso'?'selected':''}>En curso</option>
+            <option value="finalizado" ${t.estado==='finalizado'?'selected':''}>Finalizado</option>
+          </select>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<p class="empty">Error cargando.</p>'; }
+}
+
+window.cambiarEstado = async function(id, estado) {
+  try {
+    await update('torneos', id, { estado });
+    toast('Estado actualizado ✓');
+    cargarTorneos();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+};
+
+window.guardarTorneo = async function() {
+  const nombre = document.getElementById('t-nombre').value.trim();
+  const fecha  = document.getElementById('t-fecha').value;
+  if (!nombre || !fecha) { toast('Nombre y fecha son obligatorios', 'err'); return; }
+  try {
+    await insert('torneos', {
+      nombre,
+      fecha,
+      estado: document.getElementById('t-estado').value,
+      monto_buyin: Number(document.getElementById('t-buyin').value) || 0,
+      es_doble: document.getElementById('t-doble').checked,
+      descripcion: document.getElementById('t-desc').value.trim() || null,
+    });
+    toast('Torneo guardado ✓');
+    ['t-nombre','t-fecha','t-desc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('t-buyin').value = '';
+    document.getElementById('t-doble').checked = false;
+    await cargarTorneos();
+    poblarSelectores();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+};
+
+// ── JUGADORES ─────────────────────────────────────────────────
+async function cargarJugadores() {
+  const el = document.getElementById('lista-jugadores');
+  try {
+    jugadores = await query('jugadores', 'order=nombre.asc&activo=eq.true');
+    if (!jugadores.length) { el.innerHTML = '<p class="empty">Sin jugadores.</p>'; return; }
+    el.innerHTML = jugadores.map(j => `
+      <div class="lista-item">
+        <div>
+          <span style="font-weight:500;">${j.nombre}</span>
+          ${j.apodo ? `<span style="color:var(--texto2);font-size:0.85rem;"> (${j.apodo})</span>` : ''}
+        </div>
+        <span style="font-size:0.8rem;color:var(--texto2);">desde ${j.anio_inicio || '—'}</span>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<p class="empty">Error cargando.</p>'; }
+}
+
+window.guardarJugador = async function() {
+  const nombre = document.getElementById('j-nombre').value.trim();
+  const pin    = document.getElementById('j-pin').value.trim().toUpperCase();
+  if (!nombre || !pin) { toast('Nombre y PIN son obligatorios', 'err'); return; }
+  if (pin.length < 4)  { toast('El PIN debe tener al menos 4 caracteres', 'err'); return; }
+  try {
+    await insert('jugadores', {
+      nombre,
+      apodo: document.getElementById('j-apodo').value.trim() || null,
+      pin_hash: pin,   // En producción: hashear con bcrypt en edge function
+      anio_inicio: Number(document.getElementById('j-inicio').value) || null,
+    });
+    toast('Jugador agregado ✓');
+    ['j-nombre','j-apodo','j-pin','j-inicio'].forEach(id => document.getElementById(id).value = '');
+    await cargarJugadores();
+    poblarSelectores();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+};
+
+// ── Poblar selectores de torneos/jugadores ────────────────────
+function poblarSelectores() {
+  ['r-torneo','c-torneo'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    const val = sel.value;
+    sel.innerHTML = '<option value="">— Seleccionar torneo —</option>';
+    torneos.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = `${t.nombre} (${new Date(t.fecha+'T12:00:00').toLocaleDateString('es-AR')})`;
+      sel.appendChild(o);
+    });
+    if (val) sel.value = val;
+  });
+}
+
+// ── RESULTADOS ────────────────────────────────────────────────
+document.getElementById('r-torneo').addEventListener('change', async function() {
+  const torneoId = this.value;
+  const cont = document.getElementById('r-jugadores-lista');
+  const info  = document.getElementById('r-info');
+  if (!torneoId) { cont.innerHTML = ''; info.style.display='none'; return; }
+
+  const t = torneos.find(x => x.id === torneoId);
+  info.style.display = 'block';
+  info.innerHTML = `Pool: jugadores × 100${t?.es_doble ? ' × 2 (DOBLE)' : ''}`;
+
+  // Cargar resultados existentes
+  const existentes = await query('resultados', `torneo_id=eq.${torneoId}&select=jugador_id,posicion`);
+  const mapPos = {};
+  existentes.forEach(r => mapPos[r.jugador_id] = r.posicion);
+
+  cont.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="text-align:left;padding:0.5rem;color:var(--texto2);font-size:0.78rem;">Jugador</th>
+        <th style="padding:0.5rem;color:var(--texto2);font-size:0.78rem;">¿Jugó?</th>
+        <th style="padding:0.5rem;color:var(--texto2);font-size:0.78rem;">Posición</th>
+      </tr></thead>
+      <tbody>
+        ${jugadores.map(j => `
+          <tr>
+            <td style="padding:0.4rem 0.5rem;">${j.apodo || j.nombre}</td>
+            <td style="padding:0.4rem 0.5rem;text-align:center;">
+              <input type="checkbox" data-jid="${j.id}" class="r-jugo" ${mapPos[j.id]!==undefined?'checked':''}>
+            </td>
+            <td style="padding:0.4rem 0.5rem;text-align:center;">
+              <input type="number" data-jid="${j.id}" class="r-pos" min="1" max="100"
+                placeholder="pos" style="width:65px;text-align:center;"
+                value="${mapPos[j.id] || ''}">
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+});
+
+window.guardarResultados = async function() {
+  const torneoId = document.getElementById('r-torneo').value;
+  if (!torneoId) { toast('Seleccioná un torneo', 'err'); return; }
+
+  const checks = document.querySelectorAll('.r-jugo:checked');
+  if (!checks.length) { toast('Marcá al menos un jugador', 'err'); return; }
+
+  let ok = 0, err = 0;
+  for (const cb of checks) {
+    const jid  = cb.dataset.jid;
+    const posEl = document.querySelector(`.r-pos[data-jid="${jid}"]`);
+    const pos   = posEl?.value ? parseInt(posEl.value) : 99; // 99 = participó sin posición top10
+    try {
+      // Upsert: si ya existe lo actualiza
+      const SUPABASE_URL = 'https://wdqjtnwmlnvnkfczkceu.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkcWp0bndtbG52bmtmY3prY2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMTQzMjUsImV4cCI6MjA5NDc5MDMyNX0.-rxWJeZuHuvhQHUMxvhkxi65uDbCWfZamXpn6hdAACE';
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/resultados`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({ torneo_id: torneoId, jugador_id: jid, posicion: pos, pool_total: 0, puntos_ganados: 0 })
+      });
+      if (res.ok) ok++;
+      else err++;
+    } catch { err++; }
+  }
+  toast(err ? `${ok} guardados, ${err} errores` : `${ok} resultados guardados ✓`, err ? 'err' : 'ok');
+};
+
+// ── CAJAS ─────────────────────────────────────────────────────
+document.getElementById('c-torneo').addEventListener('change', async function() {
+  const torneoId = this.value;
+  const cont = document.getElementById('c-jugadores-lista');
+  if (!torneoId) { cont.innerHTML = ''; return; }
+
+  const existentes = await query('cajas', `torneo_id=eq.${torneoId}&select=jugador_id,buyin,rebuys`);
+  const mapCajas = {};
+  existentes.forEach(c => mapCajas[c.jugador_id] = c);
+
+  cont.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="text-align:left;padding:0.5rem;color:var(--texto2);font-size:0.78rem;">Jugador</th>
+        <th style="padding:0.5rem;color:var(--texto2);font-size:0.78rem;">¿Jugó?</th>
+        <th style="padding:0.5rem;color:var(--texto2);font-size:0.78rem;">Rebuys</th>
+      </tr></thead>
+      <tbody>
+        ${jugadores.map(j => {
+          const c = mapCajas[j.id];
+          return `<tr>
+            <td style="padding:0.4rem 0.5rem;">${j.apodo || j.nombre}</td>
+            <td style="padding:0.4rem 0.5rem;text-align:center;">
+              <input type="checkbox" data-jid="${j.id}" class="c-jugo" ${c?'checked':''}>
+            </td>
+            <td style="padding:0.4rem 0.5rem;text-align:center;">
+              <input type="number" data-jid="${j.id}" class="c-rebuys" min="0" max="20"
+                placeholder="0" style="width:65px;text-align:center;" value="${c?.rebuys||0}">
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+});
+
+window.guardarCajas = async function() {
+  const torneoId = document.getElementById('c-torneo').value;
+  if (!torneoId) { toast('Seleccioná un torneo', 'err'); return; }
+
+  const checks = document.querySelectorAll('.c-jugo:checked');
+  if (!checks.length) { toast('Marcá al menos un jugador', 'err'); return; }
+
+  let ok = 0, err = 0;
+  const SUPABASE_URL = 'https://wdqjtnwmlnvnkfczkceu.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkcWp0bndtbG52bmtmY3prY2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMTQzMjUsImV4cCI6MjA5NDc5MDMyNX0.-rxWJeZuHuvhQHUMxvhkxi65uDbCWfZamXpn6hdAACE';
+
+  for (const cb of checks) {
+    const jid     = cb.dataset.jid;
+    const rebuys  = parseInt(document.querySelector(`.c-rebuys[data-jid="${jid}"]`)?.value || 0);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/cajas`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({ torneo_id: torneoId, jugador_id: jid, buyin: 1, rebuys })
+      });
+      if (res.ok) ok++; else err++;
+    } catch { err++; }
+  }
+  toast(err ? `${ok} guardadas, ${err} errores` : `${ok} cajas guardadas ✓`, err ? 'err' : 'ok');
+};
+
+// ── BLOG ──────────────────────────────────────────────────────
+async function cargarBlog() {
+  const el = document.getElementById('lista-blog');
+  try {
+    const data = await query('blog', 'order=publicado_en.desc&limit=10');
+    if (!data.length) { el.innerHTML = '<p class="empty">Sin entradas.</p>'; return; }
+    el.innerHTML = data.map(b => `
+      <div class="lista-item">
+        <div>
+          <div style="font-weight:500;">${b.titulo}</div>
+          <div style="font-size:0.8rem;color:var(--texto2);">${b.publicado_en ? new Date(b.publicado_en).toLocaleDateString('es-AR') : 'Borrador'}</div>
+        </div>
+        <span class="badge ${b.publicado?'badge-verde':'badge-rojo'}">${b.publicado?'Publicado':'Borrador'}</span>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<p class="empty">Error cargando.</p>'; }
+}
+
+window.guardarBlog = async function() {
+  const titulo    = document.getElementById('b-titulo').value.trim();
+  const contenido = document.getElementById('b-contenido').value.trim();
+  if (!titulo || !contenido) { toast('Título y contenido son obligatorios', 'err'); return; }
+  const publicado = document.getElementById('b-publicado').checked;
+  const slug = titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  try {
+    await insert('blog', {
+      titulo, contenido, slug, publicado,
+      publicado_en: publicado ? new Date().toISOString() : null
+    });
+    toast('Entrada guardada ✓');
+    ['b-titulo','b-contenido'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('b-publicado').checked = false;
+    cargarBlog();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+};
+</script>
+
+</body>
+</html>

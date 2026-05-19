@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <span class="hero-suit">♠</span>
+  <h1>La Isla <em>del Poker</em></h1>
+  <p>Todos los jueves. El grupo, la mesa, el ritual.</p>
+</section>
+
+<main class="container">
+
+  <!-- PRÓXIMO TORNEO -->
+  <section class="section">
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
+      Próximo jueves
+    </h2>
+    <div id="proximo" class="card" style="max-width:540px;">
+      <div class="loading"></div>
+    </div>
+  </section>
+
+  <!-- ÚLTIMOS RESULTADOS -->
+  <section class="section" style="padding-top:0;">
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
+      Último torneo
+    </h2>
+    <div id="ultimo" class="card">
+      <div class="loading"></div>
+    </div>
+  </section>
+
+  <!-- TOP 5 RANKING ACTUAL -->
+  <section class="section" style="padding-top:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;">
+        Top 5 — <span id="anio-actual"></span>
+      </h2>
+      <a href="ranking.html" class="btn btn-ghost" style="font-size:0.8rem;">Ver completo →</a>
+    </div>
+    <div id="top5" class="card"><div class="loading"></div></div>
+  </section>
+
+</main>
+
+<footer>
+  <strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣
+</footer>
+
+<div id="toast"></div>
+
+<script type="module">
+import { query, formatFecha, formatNum, marcarNavActivo } from './db.js';
+
+marcarNavActivo();
+
+const anio = new Date().getFullYear();
+document.getElementById('anio-actual').textContent = anio;
+
+// ── Próximo torneo ──────────────────────────────────────────
+async function cargarProximo() {
+  const el = document.getElementById('proximo');
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const data = await query('torneos',
+      `estado=eq.proximo&fecha=gte.${hoy}&order=fecha.asc&limit=1&select=*`
+    );
+    if (!data.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">No hay torneos próximos cargados.</p>`;
+      return;
+    }
+    const t = data[0];
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="font-size:2.5rem;">🃏</div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--oro);">${t.nombre}</div>
+          <div style="color:var(--texto2);font-size:0.88rem;margin-top:0.2rem;">${formatFecha(t.fecha)}</div>
+          ${t.es_doble ? '<span class="badge badge-oro" style="margin-top:0.5rem;">⚡ Jueves DOBLE</span>' : ''}
+          ${t.descripcion ? `<p style="margin-top:0.75rem;color:var(--texto2);font-size:0.88rem;">${t.descripcion}</p>` : ''}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
+  }
+}
+
+// ── Último torneo finalizado ────────────────────────────────
+async function cargarUltimo() {
+  const el = document.getElementById('ultimo');
+  try {
+    const torneos = await query('torneos',
+      `estado=eq.finalizado&order=fecha.desc&limit=1&select=*`
+    );
+    if (!torneos.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Todavía no hay torneos finalizados.</p>`;
+      return;
+    }
+    const t = torneos[0];
+
+    const resultados = await query('resultados',
+      `torneo_id=eq.${t.id}&order=posicion.asc&limit=10&select=posicion,puntos_ganados,jugadores(nombre,apodo)`
+    );
+
+    const filas = resultados.map((r, i) => {
+      const cls = i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : '';
+      const nombre = r.jugadores?.apodo || r.jugadores?.nombre || '—';
+      const medalla = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${r.posicion}°`;
+      return `<tr class="${cls}">
+        <td>${medalla}</td>
+        <td>${nombre}</td>
+        <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos_ganados)} pts</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div style="margin-bottom:1rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--oro);">${t.nombre}</div>
+        <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(t.fecha)}</div>
+      </div>
+      ${filas
+        ? `<table class="tabla-ranking">
+            <thead><tr><th>Pos.</th><th>Jugador</th><th style="text-align:right">Puntos</th></tr></thead>
+            <tbody>${filas}</tbody>
+          </table>`
+        : '<p style="color:var(--texto2);">Sin resultados cargados.</p>'
+      }
+    `;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
+  }
+}
+
+// ── Top 5 ranking anual ─────────────────────────────────────
+async function cargarTop5() {
+  const el = document.getElementById('top5');
+  try {
+    const data = await query('v_ranking_anual',
+      `anio=eq.${anio}&order=posicion_ranking.asc&limit=5`
+    );
+    if (!data.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin datos de ranking para ${anio}.</p>`;
+      return;
+    }
+    const filas = data.map(r => {
+      const cls = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
+      const nombre = r.apodo || r.nombre;
+      return `<tr class="${cls}">
+        <td>${r.posicion_ranking}°</td>
+        <td>${nombre}</td>
+        <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos)}</td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_jugados} JJ</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <table class="tabla-ranking">
+        <thead><tr><th>#</th><th>Jugador</th><th style="text-align:right">Puntos</th><th style="text-align:right">Torneos</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
+  }
+}
+
+cargarProximo();
+cargarUltimo();
+cargarTop5();
+</script>
+
+</body>
+</html>

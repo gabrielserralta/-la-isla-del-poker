@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ranking · La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Ranking</h1>
+    <p>Puntos acumulados por temporada</p>
+  </div>
+</div>
+
+<main class="container">
+  <section class="section">
+
+    <!-- TABS -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="anual">Anual</button>
+        <button class="tab-btn" data-tab="quinquenal">Quinquenal</button>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <label style="text-transform:none;font-size:0.85rem;color:var(--texto2);margin:0;">Año:</label>
+        <select id="sel-anio" style="width:auto;padding:0.4rem 0.75rem;font-size:0.85rem;">
+        </select>
+      </div>
+    </div>
+
+    <!-- ANUAL -->
+    <div id="tab-anual">
+      <div id="stats-anual" class="stat-grid" style="margin-bottom:1.5rem;"></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="tabla-anual"><div class="loading"></div></div>
+      </div>
+    </div>
+
+    <!-- QUINQUENAL -->
+    <div id="tab-quinquenal" style="display:none;">
+      <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1.25rem;">
+        <label style="text-transform:none;font-size:0.85rem;color:var(--texto2);margin:0;">Quinquenio:</label>
+        <select id="sel-quinquenio" style="width:auto;padding:0.4rem 0.75rem;font-size:0.85rem;">
+          <option value="1">2020–2024</option>
+          <option value="2">2025–2029</option>
+          <option value="3">2030–2034</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="tabla-quinquenal"><div class="loading"></div></div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<footer>
+  <strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣
+</footer>
+
+<div id="toast"></div>
+
+<script type="module">
+import { query, formatNum, marcarNavActivo } from './db.js';
+
+marcarNavActivo();
+
+const anioActual = new Date().getFullYear();
+const selAnio = document.getElementById('sel-anio');
+
+// Poblar selector de años desde 2020
+for (let y = anioActual; y >= 2020; y--) {
+  const o = document.createElement('option');
+  o.value = y; o.textContent = y;
+  selAnio.appendChild(o);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tab-anual').style.display      = tab === 'anual'      ? '' : 'none';
+    document.getElementById('tab-quinquenal').style.display = tab === 'quinquenal' ? '' : 'none';
+  });
+});
+
+// ── Ranking Anual ─────────────────────────────────────────────
+async function cargarAnual(anio) {
+  const el   = document.getElementById('tabla-anual');
+  const stats = document.getElementById('stats-anual');
+  el.innerHTML = '<div class="loading"></div>';
+
+  try {
+    const data = await query('v_ranking_anual',
+      `anio=eq.${anio}&order=posicion_ranking.asc`
+    );
+
+    if (!data.length) {
+      el.innerHTML = `<p class="empty">Sin datos para ${anio}.</p>`;
+      stats.innerHTML = '';
+      return;
+    }
+
+    const totalPuntos = data.reduce((s, r) => s + (r.puntos || 0), 0);
+    const totalJuegan = data.reduce((s, r) => s + (r.torneos_jugados || 0), 0);
+
+    stats.innerHTML = `
+      <div class="stat-box"><div class="num">${data.length}</div><div class="lbl">Jugadores</div></div>
+      <div class="stat-box"><div class="num">${formatNum(totalPuntos)}</div><div class="lbl">Puntos repartidos</div></div>
+      <div class="stat-box"><div class="num">${totalJuegan}</div><div class="lbl">Participaciones</div></div>
+    `;
+
+    const maxPuntos = data[0].puntos || 1;
+
+    const filas = data.map(r => {
+      const cls = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
+      const nombre = r.apodo || r.nombre;
+      const pct = Math.round((r.puntos / maxPuntos) * 100);
+      return `<tr class="${cls}">
+        <td style="width:40px;font-weight:600;">${r.posicion_ranking}°</td>
+        <td>${nombre}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:60px;">
+              <div style="width:${pct}%;height:100%;background:var(--verde-claro);border-radius:3px;"></div>
+            </div>
+            <span style="color:var(--oro);font-weight:500;min-width:70px;text-align:right;">${formatNum(r.puntos)}</span>
+          </div>
+        </td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_jugados}</td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${formatNum(r.promedio)}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <table class="tabla-ranking" style="width:100%;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jugador</th>
+            <th>Puntos</th>
+            <th style="text-align:right">Torneos</th>
+            <th style="text-align:right">Promedio</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p class="empty">Error cargando datos.</p>`;
+  }
+}
+
+// ── Ranking Quinquenal ────────────────────────────────────────
+async function cargarQuinquenal(q) {
+  const el = document.getElementById('tabla-quinquenal');
+  el.innerHTML = '<div class="loading"></div>';
+
+  try {
+    const data = await query('v_ranking_quinquenal',
+      `quinquenio=eq.${q}&order=posicion_ranking.asc`
+    );
+
+    if (!data.length) {
+      el.innerHTML = `<p class="empty">Sin datos para este quinquenio.</p>`;
+      return;
+    }
+
+    const maxPuntos = data[0].puntos_totales || 1;
+
+    const filas = data.map(r => {
+      const cls = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
+      const nombre = r.apodo || r.nombre;
+      const pct = Math.round((r.puntos_totales / maxPuntos) * 100);
+      return `<tr class="${cls}">
+        <td style="width:40px;font-weight:600;">${r.posicion_ranking}°</td>
+        <td>${nombre}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:60px;">
+              <div style="width:${pct}%;height:100%;background:var(--oro);border-radius:3px;"></div>
+            </div>
+            <span style="color:var(--oro);font-weight:500;min-width:80px;text-align:right;">${formatNum(r.puntos_totales)}</span>
+          </div>
+        </td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_totales}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+      <table class="tabla-ranking" style="width:100%;">
+        <thead>
+          <tr>
+            <th>#</th><th>Jugador</th><th>Puntos</th><th style="text-align:right">Torneos</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p class="empty">Error cargando datos.</p>`;
+  }
+}
+
+// ── Eventos ───────────────────────────────────────────────────
+selAnio.addEventListener('change', () => cargarAnual(selAnio.value));
+
+document.getElementById('sel-quinquenio').addEventListener('change', function() {
+  cargarQuinquenal(this.value);
+});
+
+// Quinquenio actual
+const qActual = Math.floor((anioActual - 2020) / 5) + 1;
+document.getElementById('sel-quinquenio').value = qActual;
+
+cargarAnual(anioActual);
+cargarQuinquenal(qActual);
+</script>
+
+</body>
+</html>

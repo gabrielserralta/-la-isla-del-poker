@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galería · La Isla del Poker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .galeria-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .foto-card {
+      border-radius: var(--radio);
+      overflow: hidden;
+      border: 1px solid var(--borde);
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      background: var(--panel);
+    }
+    .foto-card:hover { transform: scale(1.02); border-color: var(--oro); }
+    .foto-card img { width: 100%; height: 180px; object-fit: cover; display: block; }
+    .foto-card .foto-info {
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--texto2);
+    }
+    .lightbox {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .lightbox.open { opacity: 1; pointer-events: all; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+    .lightbox-close {
+      position: fixed; top: 1rem; right: 1.5rem;
+      font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">♠ La Isla <span>del Poker</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="ranking.html">Ranking</a></li>
+    <li><a href="stats.html">Estadísticas</a></li>
+    <li><a href="galeria.html">Galería</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="admin.html">Admin</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Galería</h1>
+    <p>Las noches de La Isla</p>
+  </div>
+</div>
+
+<main class="container section">
+  <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+    <button class="btn btn-ghost active-filter" onclick="filtrar('')">Todas</button>
+    <button class="btn btn-ghost" onclick="filtrar('torneo')">Torneos</button>
+    <button class="btn btn-ghost" onclick="filtrar('grupo')">Grupo</button>
+    <button class="btn btn-ghost" onclick="filtrar('general')">General</button>
+  </div>
+
+  <div id="galeria" class="galeria-grid"><div class="loading" style="grid-column:1/-1;"></div></div>
+</main>
+
+<div class="lightbox" id="lightbox" onclick="cerrarLightbox()">
+  <button class="lightbox-close" onclick="cerrarLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<footer><strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣</footer>
+<div id="toast"></div>
+
+<script type="module">
+import { query, marcarNavActivo } from './db.js';
+marcarNavActivo();
+
+let todasLasFotos = [];
+
+async function cargarFotos() {
+  const el = document.getElementById('galeria');
+  try {
+    todasLasFotos = await query('fotos', 'order=subida_en.desc');
+    renderFotos(todasLasFotos);
+  } catch(e) {
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1;">Sin fotos todavía.</p>';
+  }
+}
+
+function renderFotos(fotos) {
+  const el = document.getElementById('galeria');
+  if (!fotos.length) {
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1;">Sin fotos en esta categoría.</p>';
+    return;
+  }
+  el.innerHTML = fotos.map(f => `
+    <div class="foto-card" onclick="abrirLightbox('${f.url}')">
+      <img src="${f.url}" alt="${f.descripcion||''}" loading="lazy"
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 3%22><rect fill=%22%23141c18%22 width=%224%22 height=%223%22/><text x=%222%22 y=%221.8%22 text-anchor=%22middle%22 fill=%22%239aab9f%22 font-size=%221%22>🃏</text></svg>'">
+      ${f.descripcion ? `<div class="foto-info">${f.descripcion}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+window.filtrar = function(cat) {
+  document.querySelectorAll('.btn-ghost').forEach(b => b.classList.remove('active-filter'));
+  event.currentTarget.classList.add('active-filter');
+  const filtradas = cat ? todasLasFotos.filter(f => f.categoria === cat) : todasLasFotos;
+  renderFotos(filtradas);
+};
+
+window.abrirLightbox = function(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+};
+
+window.cerrarLightbox = function() {
+  document.getElementById('lightbox').classList.remove('open');
+};
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') window.cerrarLightbox(); });
+
+cargarFotos();
+</script>
+
+<style>.active-filter { border-color: var(--oro) !important; color: var(--oro) !important; }</style>
+</body>
+</html>
