@@ -104,14 +104,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── Ranking Anual ─────────────────────────────────────────────
 async function cargarAnual(anio) {
-  const el   = document.getElementById('tabla-anual');
+  const el    = document.getElementById('tabla-anual');
   const stats = document.getElementById('stats-anual');
   el.innerHTML = '<div class="loading"></div>';
 
   try {
-    const data = await query('v_ranking_anual',
-      `anio=eq.${anio}&order=posicion_ranking.asc`
-    );
+    const data = await query('v_ranking_anual', `anio=eq.${anio}&order=posicion_ranking.asc`);
 
     if (!data.length) {
       el.innerHTML = `<p class="empty">Sin datos para ${anio}.</p>`;
@@ -119,24 +117,85 @@ async function cargarAnual(anio) {
       return;
     }
 
+    // ── Última fecha jugada: ganadores (pos 1, 2, 3) ──────────
+    const ultimoTorneo = await query('torneos',
+      `estado=eq.finalizado&anio=eq.${anio}&order=fecha.desc&limit=1&select=id,nombre`
+    );
+
+    // Penúltima fecha para calcular posición anterior
+    const penultimoTorneo = await query('torneos',
+      `estado=eq.finalizado&anio=eq.${anio}&order=fecha.desc&limit=1&offset=1&select=id`
+    );
+
+    // Medallas: pos 1,2,3 de la última fecha
+    const medallaMap = {};
+    if (ultimoTorneo.length) {
+      const ultRes = await query('resultados',
+        `torneo_id=eq.${ultimoTorneo[0].id}&posicion=lte.3&posicion=gte.1&select=jugador_id,posicion`
+      );
+      ultRes.forEach(r => { medallaMap[r.jugador_id] = r.posicion; });
+    }
+
+    // Ranking sin última fecha → posición anterior
+    const posAnteriorMap = {};
+    if (penultimoTorneo.length) {
+      // Recalcular ranking excluyendo la última fecha
+      const todosResultados = await query('resultados',
+        `torneo_id=neq.${ultimoTorneo[0]?.id}&select=jugador_id,puntos_ganados,torneos(anio)`
+      );
+      const acum = {};
+      todosResultados.forEach(r => {
+        if (r.torneos?.anio != anio) return;
+        if (!acum[r.jugador_id]) acum[r.jugador_id] = 0;
+        acum[r.jugador_id] += r.puntos_ganados;
+      });
+      const sorted = Object.entries(acum).sort((a,b) => b[1]-a[1]);
+      sorted.forEach(([jid], i) => { posAnteriorMap[jid] = i + 1; });
+    }
+
+    // Mapa nombre → id para medallas y posición anterior
+    const jugMap = {};
+    await query('jugadores', 'select=id,nombre,apodo').then(jj => {
+      jj.forEach(j => { jugMap[j.apodo || j.nombre] = j.id; });
+    });
+
     const totalPuntos = data.reduce((s, r) => s + (r.puntos || 0), 0);
     const totalJuegan = data.reduce((s, r) => s + (r.torneos_jugados || 0), 0);
+    const ultNombre   = ultimoTorneo[0]?.nombre || '';
 
     stats.innerHTML = `
       <div class="stat-box"><div class="num">${data.length}</div><div class="lbl">Jugadores</div></div>
       <div class="stat-box"><div class="num">${formatNum(totalPuntos)}</div><div class="lbl">Puntos repartidos</div></div>
       <div class="stat-box"><div class="num">${totalJuegan}</div><div class="lbl">Participaciones</div></div>
+      ${ultNombre ? `<div class="stat-box" style="grid-column:span 1;"><div class="num" style="font-size:1rem;">🃏</div><div class="lbl">Última: ${ultNombre}</div></div>` : ''}
     `;
 
     const maxPuntos = data[0].puntos || 1;
 
     const filas = data.map(r => {
-      const cls = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
+      const cls    = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
       const nombre = r.apodo || r.nombre;
-      const pct = Math.round((r.puntos / maxPuntos) * 100);
+      const jid    = jugMap[nombre];
+      const pct    = Math.round((r.puntos / maxPuntos) * 100);
+
+      // Medalla de última fecha
+      const medallaPos = medallaMap[jid];
+      const medalla = medallaPos === 1 ? '🥇' : medallaPos === 2 ? '🥈' : medallaPos === 3 ? '🥉' : '';
+
+      // Movimiento vs semana anterior
+      const posAnt = posAnteriorMap[jid];
+      let movLabel = '';
+      if (posAnt !== undefined) {
+        const dif = posAnt - r.posicion_ranking;
+        if (dif > 0)      movLabel = `<span style="color:#4caf7d;font-size:0.8rem;">▲${dif}</span>`;
+        else if (dif < 0) movLabel = `<span style="color:#e06060;font-size:0.8rem;">▼${Math.abs(dif)}</span>`;
+        else               movLabel = `<span style="color:var(--texto2);font-size:0.8rem;">—</span>`;
+      }
+
       return `<tr class="${cls}">
         <td style="width:40px;font-weight:600;">${r.posicion_ranking}°</td>
-        <td>${nombre}</td>
+        <td style="width:32px;text-align:center;">${movLabel}</td>
+        <td>${nombre} ${medalla}</td>
         <td>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:60px;">
@@ -155,9 +214,10 @@ async function cargarAnual(anio) {
         <thead>
           <tr>
             <th>#</th>
+            <th style="text-align:center;">mov.</th>
             <th>Jugador</th>
             <th>Puntos</th>
-            <th style="text-align:right">Torneos</th>
+            <th style="text-align:right">Fechas</th>
             <th style="text-align:right">Promedio</th>
           </tr>
         </thead>
@@ -165,6 +225,7 @@ async function cargarAnual(anio) {
       </table>
     `;
   } catch(e) {
+    console.error(e);
     el.innerHTML = `<p class="empty">Error cargando datos.</p>`;
   }
 }
