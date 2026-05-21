@@ -118,15 +118,26 @@ async function cargarUltimo() {
     const t = torneos[0];
 
     const resultados = await query('resultados',
-      `torneo_id=eq.${t.id}&order=posicion.asc&limit=10&select=posicion,puntos_ganados,jugadores(nombre,apodo)`
+      `torneo_id=eq.${t.id}&order=puntos_ganados.desc,posicion.asc&select=posicion,puntos_ganados,jugadores(nombre,apodo)`
     );
 
-    const filas = resultados.map((r, i) => {
-      const cls = i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : '';
+    // Separar posicionados (1-10) de presencia (0)
+    const posicionados = resultados.filter(r => r.posicion > 0).sort((a,b) => a.posicion - b.posicion);
+    const presencia    = resultados.filter(r => r.posicion === 0);
+    const ordenados    = [...posicionados, ...presencia];
+
+    const filas = ordenados.map((r) => {
       const nombre = r.jugadores?.apodo || r.jugadores?.nombre || '—';
-      const medalla = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${r.posicion}°`;
+      let posLabel;
+      if (r.posicion === 0) {
+        posLabel = '<span style="color:var(--texto2);font-size:0.82rem;">presencia</span>';
+      } else if (r.posicion === 1) posLabel = '🥇';
+      else if (r.posicion === 2)   posLabel = '🥈';
+      else if (r.posicion === 3)   posLabel = '🥉';
+      else                          posLabel = `${r.posicion}°`;
+      const cls = r.posicion === 1 ? 'pos-1' : r.posicion === 2 ? 'pos-2' : r.posicion === 3 ? 'pos-3' : '';
       return `<tr class="${cls}">
-        <td>${medalla}</td>
+        <td style="width:60px;">${posLabel}</td>
         <td>${nombre}</td>
         <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos_ganados)} pts</td>
       </tr>`;
