@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Isla del Poker</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Nav mobile mejorado */
+    @media (max-width: 640px) {
+      .nav-logo { font-size: 1rem; }
+      .nav-links a { padding: 0.4rem 0.4rem; font-size: 0.72rem; }
+    }
+    .torneo-badge {
+      display: inline-block;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.3);
+      color: var(--oro);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+  </style>
 </head>
 <body>
 
@@ -28,24 +47,20 @@
 
 <main class="container">
 
-  <!-- PRÓXIMO TORNEO -->
+  <!-- TORNEO ACTIVO -->
   <section class="section">
     <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
-      Próximo jueves
+      Torneo en curso
     </h2>
-    <div id="proximo" class="card" style="max-width:540px;">
-      <div class="loading"></div>
-    </div>
+    <div id="torneo-activo" class="card"><div class="loading"></div></div>
   </section>
 
-  <!-- ÚLTIMOS RESULTADOS -->
+  <!-- ÚLTIMA FECHA JUGADA -->
   <section class="section" style="padding-top:0;">
     <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
-      Último torneo
+      Última fecha
     </h2>
-    <div id="ultimo" class="card">
-      <div class="loading"></div>
-    </div>
+    <div id="ultima-fecha" class="card"><div class="loading"></div></div>
   </section>
 
   <!-- TOP 5 RANKING ACTUAL -->
@@ -57,6 +72,14 @@
       <a href="ranking.html" class="btn btn-ghost" style="font-size:0.8rem;">Ver completo →</a>
     </div>
     <div id="top5" class="card"><div class="loading"></div></div>
+  </section>
+
+  <!-- PRÓXIMA FECHA -->
+  <section class="section" style="padding-top:0;">
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
+      Próxima fecha
+    </h2>
+    <div id="proxima-fecha" class="card"><div class="loading"></div></div>
   </section>
 
 </main>
@@ -71,32 +94,71 @@
 import { query, formatFecha, formatNum, marcarNavActivo } from './db.js';
 
 marcarNavActivo();
-
 const anio = new Date().getFullYear();
 document.getElementById('anio-actual').textContent = anio;
 
-// ── Próximo torneo ──────────────────────────────────────────
-async function cargarProximo() {
-  const el = document.getElementById('proximo');
+// ── Torneo activo (cuatrimestral con más fechas recientes) ────
+async function cargarTorneoActivo() {
+  const el = document.getElementById('torneo-activo');
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const data = await query('torneos',
-      `estado=eq.proximo&fecha=gte.${hoy}&order=fecha.asc&limit=1&select=*`
+    // Detectar torneo activo por la estación del año
+    const mes = new Date().getMonth() + 1;
+    let temporada;
+    if      (mes >= 1  && mes <= 3)  temporada = 'Verano';
+    else if (mes >= 4  && mes <= 6)  temporada = 'Otono';
+    else if (mes >= 7  && mes <= 9)  temporada = 'Invierno';
+    else                              temporada = 'Primavera';
+
+    // Fechas del torneo activo
+    const fechas = await query('torneos',
+      `nombre=like.*${temporada}*&anio=eq.${anio}&nombre=not.like.*Mesa Final*&order=fecha.asc&select=id,nombre,fecha,estado,es_doble`
     );
-    if (!data.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">No hay torneos próximos cargados.</p>`;
+
+    if (!fechas.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin datos del torneo actual.</p>`;
       return;
     }
-    const t = data[0];
+
+    const finalizadas = fechas.filter(f => f.estado === 'finalizado');
+    const proximas    = fechas.filter(f => f.estado === 'proximo');
+    const enCurso     = fechas.filter(f => f.estado === 'en_curso');
+    const total       = fechas.length;
+    const jugadas     = finalizadas.length;
+    const doblesFin   = finalizadas.filter(f => f.es_doble).length;
+
+    const nombreTorneo = temporada === 'Otono' ? 'Otoño' : temporada;
+
     el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-        <div style="font-size:2.5rem;">🃏</div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--oro);">${t.nombre}</div>
-          <div style="color:var(--texto2);font-size:0.88rem;margin-top:0.2rem;">${formatFecha(t.fecha)}</div>
-          ${t.es_doble ? '<span class="badge badge-oro" style="margin-top:0.5rem;">⚡ Jueves DOBLE</span>' : ''}
-          ${t.descripcion ? `<p style="margin-top:0.75rem;color:var(--texto2);font-size:0.88rem;">${t.descripcion}</p>` : ''}
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--oro);">
+          Torneo ${nombreTorneo} ${anio}
         </div>
+        <div style="color:var(--texto2);font-size:0.85rem;margin-top:0.25rem;">
+          ${jugadas} de ${total} fechas jugadas · ${doblesFin} DOBLE${doblesFin !== 1 ? 's' : ''} disputados
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${fechas.map((f, i) => {
+          const num = i + 1;
+          const bg = f.estado === 'finalizado'
+            ? (f.es_doble ? 'rgba(201,168,76,0.25)' : 'rgba(45,168,102,0.2)')
+            : f.estado === 'en_curso'
+            ? 'rgba(45,168,102,0.4)'
+            : 'rgba(255,255,255,0.05)';
+          const border = f.es_doble && f.estado === 'finalizado'
+            ? '1px solid rgba(201,168,76,0.5)'
+            : '1px solid rgba(255,255,255,0.08)';
+          const color = f.estado === 'proximo' ? 'var(--texto2)' : 'var(--texto)';
+          const dobleIcon = f.es_doble ? '⚡' : '';
+          return `<div style="background:${bg};border:${border};border-radius:6px;
+                    padding:0.35rem 0.6rem;font-size:0.78rem;color:${color};">
+                    F${num}${dobleIcon}
+                  </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--texto2);">
+        🟢 jugada &nbsp; ⚡ DOBLE &nbsp; ░ próxima
       </div>
     `;
   } catch(e) {
@@ -104,37 +166,41 @@ async function cargarProximo() {
   }
 }
 
-// ── Último torneo finalizado ────────────────────────────────
-async function cargarUltimo() {
-  const el = document.getElementById('ultimo');
+// ── Última fecha jugada con resultados completos ──────────────
+async function cargarUltimaFecha() {
+  const el = document.getElementById('ultima-fecha');
   try {
-    const torneos = await query('torneos',
-      `estado=eq.finalizado&order=fecha.desc&limit=1&select=*`
+    const fechas = await query('torneos',
+      `estado=eq.finalizado&nombre=not.like.*Mesa Final*&order=fecha.desc&limit=1&select=*`
     );
-    if (!torneos.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Todavía no hay torneos finalizados.</p>`;
+    if (!fechas.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Todavía no hay fechas finalizadas.</p>`;
       return;
     }
-    const t = torneos[0];
+    const f = fechas[0];
 
     const resultados = await query('resultados',
-      `torneo_id=eq.${t.id}&order=puntos_ganados.desc,posicion.asc&select=posicion,puntos_ganados,jugadores(nombre,apodo)`
+      `torneo_id=eq.${f.id}&select=posicion,puntos_ganados,jugadores(nombre,apodo)&order=puntos_ganados.desc`
     );
 
-    // Separar posicionados (1-10) de presencia (0)
     const posicionados = resultados.filter(r => r.posicion > 0).sort((a,b) => a.posicion - b.posicion);
     const presencia    = resultados.filter(r => r.posicion === 0);
     const ordenados    = [...posicionados, ...presencia];
 
-    const filas = ordenados.map((r) => {
+    // Extraer número de fecha del nombre
+    const matchFecha = f.nombre.match(/Fecha (\d+)/);
+    const numFecha = matchFecha ? matchFecha[1] : '';
+    const matchTorneo = f.nombre.match(/(Verano|Oto[nñ]o|Invierno|Primavera)/i);
+    const nombreTorneo = matchTorneo ? matchTorneo[1] : '';
+
+    const filas = ordenados.map(r => {
       const nombre = r.jugadores?.apodo || r.jugadores?.nombre || '—';
       let posLabel;
-      if (r.posicion === 0) {
-        posLabel = '<span style="color:var(--texto2);font-size:0.82rem;">presencia</span>';
-      } else if (r.posicion === 1) posLabel = '🥇';
-      else if (r.posicion === 2)   posLabel = '🥈';
-      else if (r.posicion === 3)   posLabel = '🥉';
-      else                          posLabel = `${r.posicion}°`;
+      if (r.posicion === 0)      posLabel = `<span style="color:var(--texto2);font-size:0.8rem;">presencia</span>`;
+      else if (r.posicion === 1) posLabel = '🥇';
+      else if (r.posicion === 2) posLabel = '🥈';
+      else if (r.posicion === 3) posLabel = '🥉';
+      else                        posLabel = `${r.posicion}°`;
       const cls = r.posicion === 1 ? 'pos-1' : r.posicion === 2 ? 'pos-2' : r.posicion === 3 ? 'pos-3' : '';
       return `<tr class="${cls}">
         <td style="width:60px;">${posLabel}</td>
@@ -145,12 +211,15 @@ async function cargarUltimo() {
 
     el.innerHTML = `
       <div style="margin-bottom:1rem;">
-        <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--oro);">${t.nombre}</div>
-        <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(t.fecha)}</div>
+        <div class="torneo-badge">${nombreTorneo} ${anio} · Fecha ${numFecha}${f.es_doble ? ' ⚡ DOBLE' : ''}</div>
+        <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(f.fecha)}</div>
       </div>
       ${filas
         ? `<table class="tabla-ranking">
-            <thead><tr><th>Pos.</th><th>Jugador</th><th style="text-align:right">Puntos</th></tr></thead>
+            <thead><tr>
+              <th>Pos.</th><th>Jugador</th>
+              <th style="text-align:right">Puntos</th>
+            </tr></thead>
             <tbody>${filas}</tbody>
           </table>`
         : '<p style="color:var(--texto2);">Sin resultados cargados.</p>'
@@ -161,7 +230,43 @@ async function cargarUltimo() {
   }
 }
 
-// ── Top 5 ranking anual ─────────────────────────────────────
+// ── Próxima fecha ─────────────────────────────────────────────
+async function cargarProximaFecha() {
+  const el = document.getElementById('proxima-fecha');
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const data = await query('torneos',
+      `estado=eq.proximo&fecha=gte.${hoy}&nombre=not.like.*Mesa Final*&order=fecha.asc&limit=1&select=*`
+    );
+    if (!data.length) {
+      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin fechas próximas cargadas.</p>`;
+      return;
+    }
+    const f = data[0];
+    const matchFecha = f.nombre.match(/Fecha (\d+)/);
+    const numFecha = matchFecha ? matchFecha[1] : '';
+    const matchTorneo = f.nombre.match(/(Verano|Oto[nñ]o|Invierno|Primavera)/i);
+    const nombreTorneo = matchTorneo ? matchTorneo[1] : '';
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="font-size:2rem;">🃏</div>
+        <div>
+          <div class="torneo-badge">${nombreTorneo} ${anio} · Fecha ${numFecha}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--oro);">
+            ${formatFecha(f.fecha)}
+          </div>
+          ${f.es_doble ? '<span class="badge badge-oro" style="margin-top:0.5rem;">⚡ Fecha DOBLE — puntos x2</span>' : ''}
+          ${f.descripcion ? `<p style="margin-top:0.5rem;color:var(--texto2);font-size:0.85rem;">${f.descripcion}</p>` : ''}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
+  }
+}
+
+// ── Top 5 ranking anual ───────────────────────────────────────
 async function cargarTop5() {
   const el = document.getElementById('top5');
   try {
@@ -173,19 +278,23 @@ async function cargarTop5() {
       return;
     }
     const filas = data.map(r => {
-      const cls = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
+      const cls    = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
       const nombre = r.apodo || r.nombre;
       return `<tr class="${cls}">
         <td>${r.posicion_ranking}°</td>
         <td>${nombre}</td>
         <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos)}</td>
-        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_jugados} JJ</td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_jugados} fechas</td>
       </tr>`;
     }).join('');
 
     el.innerHTML = `
       <table class="tabla-ranking">
-        <thead><tr><th>#</th><th>Jugador</th><th style="text-align:right">Puntos</th><th style="text-align:right">Torneos</th></tr></thead>
+        <thead><tr>
+          <th>#</th><th>Jugador</th>
+          <th style="text-align:right">Puntos</th>
+          <th style="text-align:right">Fechas</th>
+        </tr></thead>
         <tbody>${filas}</tbody>
       </table>
     `;
@@ -194,9 +303,10 @@ async function cargarTop5() {
   }
 }
 
-cargarProximo();
-cargarUltimo();
+cargarTorneoActivo();
+cargarUltimaFecha();
 cargarTop5();
+cargarProximaFecha();
 </script>
 
 </body>
