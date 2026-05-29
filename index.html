@@ -6,11 +6,43 @@
   <title>La Isla del Poker</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    /* Nav mobile mejorado */
-    @media (max-width: 640px) {
-      .nav-logo { font-size: 1rem; }
-      .nav-links a { padding: 0.4rem 0.4rem; font-size: 0.72rem; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--negro2);
+      padding: 3rem 2rem 3rem;
+      text-align: center;
+      border-bottom: 1px solid var(--borde);
     }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 0%, rgba(26,122,74,0.25) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 80% 80%, rgba(201,168,76,0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .logo-svg {
+      width: 220px;
+      height: 160px;
+      margin: 0 auto 1.5rem;
+      display: block;
+      filter: drop-shadow(0 4px 24px rgba(0,0,0,0.5));
+    }
+    .expand-btn {
+      background: none;
+      border: none;
+      color: var(--verde-claro);
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 0.5rem 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .expand-btn:hover { color: var(--oro); }
+    .rows-hidden { display: none; }
     .torneo-badge {
       display: inline-block;
       background: rgba(201,168,76,0.12);
@@ -22,6 +54,9 @@
       margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
+    }
+    @media(max-width:640px){
+      .logo-svg { width: 170px; height: 124px; }
     }
   </style>
 </head>
@@ -40,45 +75,101 @@
 </nav>
 
 <section class="hero">
-  <span class="hero-suit">♠</span>
-  <h1>La Isla <em>del Poker</em></h1>
-  <p>Todos los jueves. El grupo, la mesa, el ritual.</p>
+  <!-- LOGO -->
+  <svg class="logo-svg" viewBox="0 0 220 160" xmlns="http://www.w3.org/2000/svg">
+    <!-- Fondo con borde redondeado -->
+    <rect x="2" y="2" width="216" height="156" rx="18" fill="#1a3d2b"/>
+    <!-- Borde dorado punteado (efecto costura) -->
+    <rect x="2" y="2" width="216" height="156" rx="18" fill="none" stroke="#c9a84c" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <rect x="8" y="8" width="204" height="144" rx="14" fill="none" stroke="#c9a84c" stroke-width="0.8" opacity="0.4"/>
+
+    <!-- Agua -->
+    <ellipse cx="110" cy="118" rx="80" ry="18" fill="#1a5c8a" opacity="0.85"/>
+    <ellipse cx="110" cy="115" rx="80" ry="16" fill="#1e6fa6" opacity="0.7"/>
+    <!-- Ondas -->
+    <path d="M48 115 Q65 110 82 115 Q99 120 116 115 Q133 110 150 115 Q167 120 172 116" fill="none" stroke="#5bb8f0" stroke-width="1.2" opacity="0.5"/>
+
+    <!-- Isla -->
+    <ellipse cx="110" cy="108" rx="52" ry="14" fill="#2d6e35"/>
+    <ellipse cx="110" cy="105" rx="50" ry="13" fill="#38873f"/>
+
+    <!-- Árbol izquierdo -->
+    <rect x="82" y="80" width="3" height="22" fill="#5a3a1a"/>
+    <ellipse cx="83.5" cy="75" rx="11" ry="13" fill="#2d8c3a"/>
+    <ellipse cx="83.5" cy="72" rx="9" ry="11" fill="#35a645"/>
+
+    <!-- Árbol central (más alto) -->
+    <rect x="108" y="72" width="4" height="28" fill="#5a3a1a"/>
+    <ellipse cx="110" cy="66" rx="13" ry="15" fill="#2d8c3a"/>
+    <ellipse cx="110" cy="62" rx="11" ry="13" fill="#35a645"/>
+
+    <!-- Árbol derecho -->
+    <rect x="134" y="80" width="3" height="22" fill="#5a3a1a"/>
+    <ellipse cx="135.5" cy="75" rx="11" ry="13" fill="#2d8c3a"/>
+    <ellipse cx="135.5" cy="72" rx="9" ry="11" fill="#35a645"/>
+
+    <!-- CHIP de poker (izquierda) -->
+    <g transform="translate(36,88)">
+      <circle cx="0" cy="0" r="15" fill="#1a1a1a"/>
+      <circle cx="0" cy="0" r="15" fill="none" stroke="#e0e0e0" stroke-width="2.5"/>
+      <circle cx="0" cy="0" r="10" fill="#1a1a1a"/>
+      <circle cx="0" cy="0" r="10" fill="none" stroke="#e0e0e0" stroke-width="1.5"/>
+      <!-- Rayas del chip -->
+      <rect x="-15" y="-2.5" width="8" height="5" fill="#e0e0e0" rx="1"/>
+      <rect x="7" y="-2.5" width="8" height="5" fill="#e0e0e0" rx="1"/>
+      <rect x="-2.5" y="-15" width="5" height="8" fill="#e0e0e0" rx="1"/>
+      <rect x="-2.5" y="7" width="5" height="8" fill="#e0e0e0" rx="1"/>
+    </g>
+
+    <!-- CARTA As de corazones (derecha, inclinada) -->
+    <g transform="translate(178,82) rotate(12)">
+      <rect x="-16" y="-22" width="32" height="44" rx="4" fill="white"/>
+      <rect x="-16" y="-22" width="32" height="44" rx="4" fill="none" stroke="#ddd" stroke-width="0.5"/>
+      <!-- A arriba izquierda -->
+      <text x="-13" y="-10" font-size="10" font-weight="bold" fill="#cc2020" font-family="serif">A</text>
+      <!-- Corazón grande central -->
+      <path d="M0 8 C0 8 -10 0 -10 -5 C-10 -10 -5 -13 0 -8 C5 -13 10 -10 10 -5 C10 0 0 8 0 8Z" fill="#cc2020"/>
+      <!-- A abajo derecha (invertido) -->
+      <text x="13" y="20" font-size="10" font-weight="bold" fill="#cc2020" font-family="serif" transform="rotate(180,5,15)">A</text>
+    </g>
+
+    <!-- Texto LA ISLA del Poker -->
+    <text x="110" y="26" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#c9a84c" letter-spacing="4">LA</text>
+    <text x="110" y="46" text-anchor="middle" font-family="Georgia,serif" font-size="22" font-weight="bold" fill="#c9a84c" letter-spacing="6">ISLA</text>
+    <text x="110" y="60" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#8fbc9f" font-style="italic" letter-spacing="2">del Poker</text>
+  </svg>
+
+  <p style="color:var(--texto2);font-size:1rem;margin-top:0.5rem;">Todos los jueves. El grupo, la mesa, el ritual.</p>
 </section>
 
 <main class="container">
 
-  <!-- TORNEO ACTIVO -->
+  <!-- TORNEO EN CURSO -->
   <section class="section">
-    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
-      Torneo en curso
-    </h2>
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">Torneo en curso</h2>
     <div id="torneo-activo" class="card"><div class="loading"></div></div>
   </section>
 
-  <!-- ÚLTIMA FECHA JUGADA -->
+  <!-- ÚLTIMA FECHA -->
   <section class="section" style="padding-top:0;">
-    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
-      Última fecha
-    </h2>
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">Última fecha</h2>
     <div id="ultima-fecha" class="card"><div class="loading"></div></div>
   </section>
 
-  <!-- TOP 5 RANKING ACTUAL -->
+  <!-- RANKING COMPLETO DEL TORNEO -->
   <section class="section" style="padding-top:0;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
       <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;">
-        Top 5 — <span id="anio-actual"></span>
+        Ranking del torneo
       </h2>
-      <a href="ranking.html" class="btn btn-ghost" style="font-size:0.8rem;">Ver completo →</a>
+      <a href="ranking.html" class="btn btn-ghost" style="font-size:0.8rem;">Ranking anual →</a>
     </div>
-    <div id="top5" class="card"><div class="loading"></div></div>
+    <div id="ranking-torneo" class="card" style="padding:0;overflow:hidden;"><div class="loading"></div></div>
   </section>
 
   <!-- PRÓXIMA FECHA -->
   <section class="section" style="padding-top:0;">
-    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">
-      Próxima fecha
-    </h2>
+    <h2 style="font-family:'Playfair Display',serif;color:var(--oro);font-size:1.4rem;margin-bottom:1.25rem;">Próxima fecha</h2>
     <div id="proxima-fecha" class="card"><div class="loading"></div></div>
   </section>
 
@@ -87,7 +178,6 @@
 <footer>
   <strong>La Isla del Poker</strong> · Todos los jueves · ♠ ♥ ♦ ♣
 </footer>
-
 <div id="toast"></div>
 
 <script type="module">
@@ -95,88 +185,61 @@ import { query, formatFecha, formatNum, marcarNavActivo } from './db.js';
 
 marcarNavActivo();
 const anio = new Date().getFullYear();
-document.getElementById('anio-actual').textContent = anio;
 
-// ── Torneo activo (cuatrimestral con más fechas recientes) ────
+// Detectar temporada actual
+const mes = new Date().getMonth() + 1;
+const temporada     = mes<=3 ? 'Verano' : mes<=6 ? 'Otono' : mes<=9 ? 'Invierno' : 'Primavera';
+const temporadaUI   = temporada === 'Otono' ? 'Otoño' : temporada;
+
+// ── Torneo en curso ───────────────────────────────────────────
 async function cargarTorneoActivo() {
   const el = document.getElementById('torneo-activo');
   try {
-    const hoy = new Date().toISOString().split('T')[0];
-    // Detectar torneo activo por la estación del año
-    const mes = new Date().getMonth() + 1;
-    let temporada;
-    if      (mes >= 1  && mes <= 3)  temporada = 'Verano';
-    else if (mes >= 4  && mes <= 6)  temporada = 'Otono';
-    else if (mes >= 7  && mes <= 9)  temporada = 'Invierno';
-    else                              temporada = 'Primavera';
-
-    // Fechas del torneo activo
     const fechas = await query('torneos',
       `nombre=like.*${temporada}*&anio=eq.${anio}&nombre=not.like.*Mesa Final*&order=fecha.asc&select=id,nombre,fecha,estado,es_doble`
     );
-
-    if (!fechas.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin datos del torneo actual.</p>`;
-      return;
-    }
+    if (!fechas.length) { el.innerHTML = `<p class="empty">Sin datos del torneo actual.</p>`; return; }
 
     const finalizadas = fechas.filter(f => f.estado === 'finalizado');
-    const proximas    = fechas.filter(f => f.estado === 'proximo');
-    const enCurso     = fechas.filter(f => f.estado === 'en_curso');
-    const total       = fechas.length;
-    const jugadas     = finalizadas.length;
-    const doblesFin   = finalizadas.filter(f => f.es_doble).length;
-
-    const nombreTorneo = temporada === 'Otono' ? 'Otoño' : temporada;
+    const total = fechas.length;
 
     el.innerHTML = `
       <div style="margin-bottom:1.25rem;">
         <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--oro);">
-          Torneo ${nombreTorneo} ${anio}
+          Torneo ${temporadaUI} ${anio}
         </div>
         <div style="color:var(--texto2);font-size:0.85rem;margin-top:0.25rem;">
-          ${jugadas} de ${total} fechas jugadas · ${doblesFin} DOBLE${doblesFin !== 1 ? 's' : ''} disputados
+          ${finalizadas.length} de ${total} fechas jugadas
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         ${fechas.map((f, i) => {
           const num = i + 1;
           const bg = f.estado === 'finalizado'
             ? (f.es_doble ? 'rgba(201,168,76,0.25)' : 'rgba(45,168,102,0.2)')
-            : f.estado === 'en_curso'
-            ? 'rgba(45,168,102,0.4)'
             : 'rgba(255,255,255,0.05)';
           const border = f.es_doble && f.estado === 'finalizado'
-            ? '1px solid rgba(201,168,76,0.5)'
-            : '1px solid rgba(255,255,255,0.08)';
+            ? '1px solid rgba(201,168,76,0.5)' : '1px solid rgba(255,255,255,0.08)';
           const color = f.estado === 'proximo' ? 'var(--texto2)' : 'var(--texto)';
-          const dobleIcon = f.es_doble ? '⚡' : '';
           return `<div style="background:${bg};border:${border};border-radius:6px;
-                    padding:0.35rem 0.6rem;font-size:0.78rem;color:${color};">
-                    F${num}${dobleIcon}
+                    padding:0.3rem 0.55rem;font-size:0.78rem;color:${color};">
+                    F${num}${f.es_doble ? '⚡' : ''}
                   </div>`;
         }).join('')}
       </div>
-      <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--texto2);">
-        🟢 jugada &nbsp; ⚡ DOBLE &nbsp; ░ próxima
-      </div>
+      <div style="margin-top:0.6rem;font-size:0.75rem;color:var(--texto2);">🟢 jugada &nbsp;⚡ DOBLE &nbsp;░ próxima</div>
     `;
-  } catch(e) {
-    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
-  }
+  } catch(e) { el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos.</p>`; }
 }
 
-// ── Última fecha jugada con resultados completos ──────────────
+// ── Última fecha con top 3 expandible ────────────────────────
 async function cargarUltimaFecha() {
   const el = document.getElementById('ultima-fecha');
   try {
     const fechas = await query('torneos',
       `estado=eq.finalizado&nombre=not.like.*Mesa Final*&order=fecha.desc&limit=1&select=*`
     );
-    if (!fechas.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Todavía no hay fechas finalizadas.</p>`;
-      return;
-    }
+    if (!fechas.length) { el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin fechas finalizadas.</p>`; return; }
     const f = fechas[0];
 
     const resultados = await query('resultados',
@@ -187,47 +250,107 @@ async function cargarUltimaFecha() {
     const presencia    = resultados.filter(r => r.posicion === 0);
     const ordenados    = [...posicionados, ...presencia];
 
-    // Extraer número de fecha del nombre
-    const matchFecha = f.nombre.match(/Fecha (\d+)/);
-    const numFecha = matchFecha ? matchFecha[1] : '';
-    const matchTorneo = f.nombre.match(/(Verano|Oto[nñ]o|Invierno|Primavera)/i);
-    const nombreTorneo = matchTorneo ? matchTorneo[1] : '';
+    if (!ordenados.length) {
+      el.innerHTML = `
+        <div style="margin-bottom:0.75rem;">
+          <div class="torneo-badge">${temporadaUI} ${anio} · ${f.nombre.match(/Fecha \d+/)?.[0] || ''}${f.es_doble?' ⚡ DOBLE':''}</div>
+          <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(f.fecha)}</div>
+        </div>
+        <p style="color:var(--texto2);">Sin resultados cargados.</p>`;
+      return;
+    }
 
-    const filas = ordenados.map(r => {
+    const top3    = ordenados.slice(0, 3);
+    const resto   = ordenados.slice(3);
+    const hayMas  = resto.length > 0;
+
+    const filaHTML = (r) => {
       const nombre = r.jugadores?.apodo || r.jugadores?.nombre || '—';
-      let posLabel;
-      if (r.posicion === 0)      posLabel = `<span style="color:var(--texto2);font-size:0.8rem;">presencia</span>`;
-      else if (r.posicion === 1) posLabel = '🥇';
-      else if (r.posicion === 2) posLabel = '🥈';
-      else if (r.posicion === 3) posLabel = '🥉';
-      else                        posLabel = `${r.posicion}°`;
-      const cls = r.posicion === 1 ? 'pos-1' : r.posicion === 2 ? 'pos-2' : r.posicion === 3 ? 'pos-3' : '';
+      let posLabel = r.posicion === 0
+        ? `<span style="color:var(--texto2);font-size:0.8rem;">presencia</span>`
+        : r.posicion === 1 ? '🥇' : r.posicion === 2 ? '🥈' : r.posicion === 3 ? '🥉' : `${r.posicion}°`;
+      const cls = r.posicion===1?'pos-1':r.posicion===2?'pos-2':r.posicion===3?'pos-3':'';
+      return `<tr class="${cls}"><td style="width:60px;">${posLabel}</td><td>${nombre}</td><td style="text-align:right;color:var(--oro);">${formatNum(r.puntos_ganados)} pts</td></tr>`;
+    };
+
+    el.innerHTML = `
+      <div style="margin-bottom:1rem;">
+        <div class="torneo-badge">${temporadaUI} ${anio} · ${f.nombre.match(/Fecha \d+/)?.[0] || ''}${f.es_doble?' ⚡ DOBLE':''}</div>
+        <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(f.fecha)}</div>
+      </div>
+      <table class="tabla-ranking">
+        <thead><tr><th>Pos.</th><th>Jugador</th><th style="text-align:right">Puntos</th></tr></thead>
+        <tbody>
+          ${top3.map(filaHTML).join('')}
+          <tbody id="filas-extra" class="rows-hidden">
+            ${resto.map(filaHTML).join('')}
+          </tbody>
+        </tbody>
+      </table>
+      ${hayMas ? `<button class="expand-btn" id="btn-expandir" onclick="expandirFecha()">
+        Ver todos los resultados (${ordenados.length}) ▾
+      </button>` : ''}
+    `;
+  } catch(e) { el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos.</p>`; }
+}
+
+window.expandirFecha = function() {
+  const extra = document.getElementById('filas-extra');
+  const btn   = document.getElementById('btn-expandir');
+  const abierto = !extra.classList.contains('rows-hidden');
+  extra.classList.toggle('rows-hidden', abierto);
+  btn.textContent = abierto
+    ? `Ver todos los resultados ▾`
+    : `Ocultar ▴`;
+};
+
+// ── Ranking completo del torneo actual ───────────────────────
+async function cargarRankingTorneo() {
+  const el = document.getElementById('ranking-torneo');
+  try {
+    const data = await query('v_ranking_anual',
+      `anio=eq.${anio}&order=posicion_ranking.asc`
+    );
+    if (!data.length) { el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin datos de ranking.</p>`; return; }
+
+    const maxPuntos = data[0].puntos || 1;
+
+    const filas = data.map(r => {
+      const cls    = r.posicion_ranking===1?'pos-1':r.posicion_ranking===2?'pos-2':r.posicion_ranking===3?'pos-3':'';
+      const nombre = r.apodo || r.nombre;
+      const pct    = Math.round((r.puntos / maxPuntos) * 100);
       return `<tr class="${cls}">
-        <td style="width:60px;">${posLabel}</td>
+        <td style="width:36px;font-weight:600;padding-left:1rem;">${r.posicion_ranking}°</td>
         <td>${nombre}</td>
-        <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos_ganados)} pts</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <div style="flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:40px;">
+              <div style="width:${pct}%;height:100%;background:var(--verde-claro);border-radius:3px;"></div>
+            </div>
+            <span style="color:var(--oro);font-weight:500;min-width:60px;text-align:right;">${formatNum(r.puntos)}</span>
+          </div>
+        </td>
+        <td style="text-align:right;color:var(--texto2);font-size:0.82rem;padding-right:1rem;">${r.torneos_jugados}F</td>
       </tr>`;
     }).join('');
 
     el.innerHTML = `
-      <div style="margin-bottom:1rem;">
-        <div class="torneo-badge">${nombreTorneo} ${anio} · Fecha ${numFecha}${f.es_doble ? ' ⚡ DOBLE' : ''}</div>
-        <div style="color:var(--texto2);font-size:0.85rem;">${formatFecha(f.fecha)}</div>
+      <div style="padding:0.75rem 1rem;border-bottom:1px solid var(--borde);font-size:0.78rem;color:var(--texto2);text-transform:uppercase;letter-spacing:0.06em;">
+        Torneo ${temporadaUI} ${anio} · ${data.length} jugadores
       </div>
-      ${filas
-        ? `<table class="tabla-ranking">
-            <thead><tr>
-              <th>Pos.</th><th>Jugador</th>
-              <th style="text-align:right">Puntos</th>
-            </tr></thead>
-            <tbody>${filas}</tbody>
-          </table>`
-        : '<p style="color:var(--texto2);">Sin resultados cargados.</p>'
-      }
+      <table class="tabla-ranking" style="width:100%;">
+        <thead>
+          <tr>
+            <th style="padding-left:1rem;">#</th>
+            <th>Jugador</th>
+            <th>Puntos</th>
+            <th style="text-align:right;padding-right:1rem;">Fechas</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
     `;
-  } catch(e) {
-    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
-  }
+  } catch(e) { el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos.</p>`; }
 }
 
 // ── Próxima fecha ─────────────────────────────────────────────
@@ -238,74 +361,25 @@ async function cargarProximaFecha() {
     const data = await query('torneos',
       `estado=eq.proximo&fecha=gte.${hoy}&nombre=not.like.*Mesa Final*&order=fecha.asc&limit=1&select=*`
     );
-    if (!data.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin fechas próximas cargadas.</p>`;
-      return;
-    }
+    if (!data.length) { el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin fechas próximas.</p>`; return; }
     const f = data[0];
-    const matchFecha = f.nombre.match(/Fecha (\d+)/);
-    const numFecha = matchFecha ? matchFecha[1] : '';
-    const matchTorneo = f.nombre.match(/(Verano|Oto[nñ]o|Invierno|Primavera)/i);
-    const nombreTorneo = matchTorneo ? matchTorneo[1] : '';
-
+    const numFecha = f.nombre.match(/Fecha (\d+)/)?.[1] || '';
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
         <div style="font-size:2rem;">🃏</div>
         <div>
-          <div class="torneo-badge">${nombreTorneo} ${anio} · Fecha ${numFecha}</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--oro);">
-            ${formatFecha(f.fecha)}
-          </div>
-          ${f.es_doble ? '<span class="badge badge-oro" style="margin-top:0.5rem;">⚡ Fecha DOBLE — puntos x2</span>' : ''}
-          ${f.descripcion ? `<p style="margin-top:0.5rem;color:var(--texto2);font-size:0.85rem;">${f.descripcion}</p>` : ''}
+          <div class="torneo-badge">${temporadaUI} ${anio} · Fecha ${numFecha}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--oro);">${formatFecha(f.fecha)}</div>
+          ${f.es_doble ? '<span class="badge badge-oro" style="margin-top:0.5rem;display:inline-block;">⚡ Fecha DOBLE — puntos x2</span>' : ''}
         </div>
       </div>
     `;
-  } catch(e) {
-    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
-  }
-}
-
-// ── Top 5 ranking anual ───────────────────────────────────────
-async function cargarTop5() {
-  const el = document.getElementById('top5');
-  try {
-    const data = await query('v_ranking_anual',
-      `anio=eq.${anio}&order=posicion_ranking.asc&limit=5`
-    );
-    if (!data.length) {
-      el.innerHTML = `<p class="empty" style="padding:1.5rem;">Sin datos de ranking para ${anio}.</p>`;
-      return;
-    }
-    const filas = data.map(r => {
-      const cls    = r.posicion_ranking === 1 ? 'pos-1' : r.posicion_ranking === 2 ? 'pos-2' : r.posicion_ranking === 3 ? 'pos-3' : '';
-      const nombre = r.apodo || r.nombre;
-      return `<tr class="${cls}">
-        <td>${r.posicion_ranking}°</td>
-        <td>${nombre}</td>
-        <td style="text-align:right;color:var(--oro);">${formatNum(r.puntos)}</td>
-        <td style="text-align:right;color:var(--texto2);font-size:0.85rem;">${r.torneos_jugados} fechas</td>
-      </tr>`;
-    }).join('');
-
-    el.innerHTML = `
-      <table class="tabla-ranking">
-        <thead><tr>
-          <th>#</th><th>Jugador</th>
-          <th style="text-align:right">Puntos</th>
-          <th style="text-align:right">Fechas</th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-      </table>
-    `;
-  } catch(e) {
-    el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos disponibles.</p>`;
-  }
+  } catch(e) { el.innerHTML = `<p style="color:var(--texto2);padding:1rem;">Sin datos.</p>`; }
 }
 
 cargarTorneoActivo();
 cargarUltimaFecha();
-cargarTop5();
+cargarRankingTorneo();
 cargarProximaFecha();
 </script>
 
