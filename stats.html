@@ -94,7 +94,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 async function cargarGlobales() {
   const el = document.getElementById('stats-globales');
   try {
-    const data = await query('v_stats_cajas', 'select=cajas_total,rebuys_total,jugadores,recaudado');
+    const hoy = new Date().toISOString().split('T')[0];
+    const data = await query('v_stats_cajas', `fecha=lte.${hoy}&select=cajas_total,rebuys_total,jugadores,recaudado`);
     const totalCajas    = data.reduce((s, r) => s + Number(r.cajas_total || 0), 0);
     const totalRebuys   = data.reduce((s, r) => s + Number(r.rebuys_total || 0), 0);
     const totalTorneos  = data.length;
@@ -114,8 +115,9 @@ async function cargarTorneos(anio) {
   const el = document.getElementById('tabla-torneos');
   el.innerHTML = '<div class="loading"></div>';
   try {
+    const hoy = new Date().toISOString().split('T')[0];
     const data = await query('v_stats_cajas',
-      `anio=eq.${anio}&order=fecha.desc`
+      `anio=eq.${anio}&fecha=lte.${hoy}&order=fecha.desc`
     );
 
     if (!data.length) {
