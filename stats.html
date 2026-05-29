@@ -116,29 +116,51 @@ async function cargarTorneos(anio) {
   el.innerHTML = '<div class="loading"></div>';
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const data = await query('v_stats_cajas',
-      `anio=eq.${anio}&fecha=lte.${hoy}&order=fecha.desc`
+    // Traer de más antiguo a más nuevo para calcular acumulado
+    const dataAsc = await query('v_stats_cajas',
+      `anio=eq.${anio}&fecha=lte.${hoy}&order=fecha.asc`
     );
 
-    if (!data.length) {
+    if (!dataAsc.length) {
       el.innerHTML = `<p class="empty">Sin datos para ${anio}.</p>`;
       return;
     }
 
-    const filas = data.map(r => `
-      <tr>
-        <td style="font-size:0.85rem;color:var(--texto2);">${new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-AR', {day:'numeric', month:'short'})}</td>
-        <td>${r.torneo}</td>
-        <td style="text-align:right;">${r.jugadores || 0}</td>
-        <td style="text-align:right;">${formatNum(r.cajas_total)}</td>
-        <td style="text-align:right;color:var(--texto2);">${formatNum(r.rebuys_total)}</td>
-        <td style="text-align:right;color:var(--oro);">$${formatNum(r.recaudado)}</td>
-      </tr>
-    `).join('');
+    // Calcular recaudado (50% del pozo) y acumulado por fecha
+    // Pozo = total_pozo de la vista; si no existe, usar cajas_total × monto_caja
+    let acum = 0;
+    const conAcum = dataAsc.map(r => {
+      // total_pozo viene de la vista; si es null (sin cajas) = 0
+      const pozo      = Number(r.total_pozo || 0);
+      const recaudado = Math.round(pozo * 0.5);
+      acum += recaudado;
+      return { ...r, pozo, recaudado, acumulado: acum };
+    });
 
+    // Invertir para mostrar más reciente primero
+    const data = [...conAcum].reverse();
+    const totalAcum = conAcum[conAcum.length - 1]?.acumulado || 0;
     const totCajas  = data.reduce((s, r) => s + Number(r.cajas_total || 0), 0);
-    const totRebuys = data.reduce((s, r) => s + Number(r.rebuys_total || 0), 0);
-    const totRec    = data.reduce((s, r) => s + Number(r.recaudado || 0), 0);
+    const totPozo   = data.reduce((s, r) => s + r.pozo, 0);
+    const totRec    = Math.round(totPozo * 0.5);
+
+    const filas = data.map(r => {
+      const fechaLabel = new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-AR', {day:'numeric', month:'short'});
+      const sinDatos   = !r.jugadores || r.jugadores === 0;
+      const estilo     = sinDatos ? 'color:var(--texto2);' : '';
+      return `<tr style="${sinDatos ? 'opacity:0.55;' : ''}">
+        <td style="font-size:0.85rem;color:var(--texto2);">${fechaLabel}</td>
+        <td>${r.torneo}</td>
+        <td style="text-align:right;${estilo}">${r.jugadores || 0}</td>
+        <td style="text-align:right;${estilo}">${formatNum(r.cajas_total)}</td>
+        <td style="text-align:right;color:${sinDatos?'var(--texto2)':'var(--oro)'};">
+          ${sinDatos ? '—' : '$' + formatNum(r.recaudado)}
+        </td>
+        <td style="text-align:right;color:${sinDatos?'var(--texto2)':'var(--verde-claro)'};font-weight:${sinDatos?'400':'500'};">
+          ${sinDatos ? '—' : '$' + formatNum(r.acumulado)}
+        </td>
+      </tr>`;
+    }).join('');
 
     el.innerHTML = `
       <table class="tabla-ranking" style="width:100%;">
@@ -148,8 +170,8 @@ async function cargarTorneos(anio) {
             <th>Torneo</th>
             <th style="text-align:right">Jugadores</th>
             <th style="text-align:right">Cajas</th>
-            <th style="text-align:right">Rebuys</th>
-            <th style="text-align:right">Recaudado</th>
+            <th style="text-align:right">Recaudado (50%)</th>
+            <th style="text-align:right">Acumulado</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
@@ -158,8 +180,8 @@ async function cargarTorneos(anio) {
             <td colspan="2" style="padding:0.75rem 1rem;color:var(--texto2);font-size:0.85rem;">Total ${anio}</td>
             <td></td>
             <td style="text-align:right;padding:0.75rem 1rem;font-weight:500;">${formatNum(totCajas)}</td>
-            <td style="text-align:right;padding:0.75rem 1rem;color:var(--texto2);">${formatNum(totRebuys)}</td>
             <td style="text-align:right;padding:0.75rem 1rem;color:var(--oro);font-weight:600;">$${formatNum(totRec)}</td>
+            <td style="text-align:right;padding:0.75rem 1rem;color:var(--verde-claro);font-weight:700;">$${formatNum(totalAcum)}</td>
           </tr>
         </tfoot>
       </table>
