@@ -297,6 +297,10 @@ window.doLogin = function() {
   }
 };
 window.doLogout = function() { logoutAdmin(); location.reload(); };
+// ── Estado compartido ─────────────────────────────────────────
+let fechas = [], jugadores = [];
+const hoy = new Date().toISOString().split('T')[0];
+
 document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') window.doLogin(); });
 if (isAdmin()) {
   document.getElementById('login-screen').style.display = 'none';
@@ -311,10 +315,6 @@ window.showPanel = function(id, btn) {
   document.getElementById(`panel-${id}`).classList.add('active');
   btn.classList.add('active');
 };
-
-// ── Estado compartido ─────────────────────────────────────────
-let fechas = [], jugadores = [];
-const hoy = new Date().toISOString().split('T')[0];
 
 async function initAdmin() {
   await Promise.all([cargarFechas(), cargarJugadores()]);
