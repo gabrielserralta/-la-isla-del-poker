@@ -525,20 +525,21 @@ document.getElementById('c-fecha').addEventListener('change', async function() {
     <thead><tr>
       <th>Jugador</th>
       <th style="text-align:center;width:55px;">Jugó</th>
-      <th style="text-align:center;width:70px;">Rebuys</th>
+      <th style="text-align:center;width:80px;">Cajas totales</th>
       <th style="text-align:center;width:65px;">Add-on</th>
     </tr></thead>
     <tbody>
       ${jugadores.map(j => {
         const c = mapC[j.id];
+        const totalCajas = c ? (c.buyin + c.rebuys) : 1;
         return `<tr>
           <td>${j.apodo || j.nombre}</td>
           <td style="text-align:center;">
             <input type="checkbox" data-jid="${j.id}" class="c-jugo" ${c?'checked':''}>
           </td>
           <td style="text-align:center;">
-            <input type="number" data-jid="${j.id}" class="c-rebuys" min="0" max="30"
-              placeholder="0" value="${c?.rebuys??0}">
+            <input type="number" data-jid="${j.id}" class="c-cajas" min="1" max="30"
+              placeholder="1" value="${c ? totalCajas : 1}">
           </td>
           <td style="text-align:center;">
             <input type="checkbox" data-jid="${j.id}" class="c-addon" ${c?.addon?'checked':''}>
@@ -546,7 +547,8 @@ document.getElementById('c-fecha').addEventListener('change', async function() {
         </tr>`;
       }).join('')}
     </tbody>
-  </table>`;
+  </table>
+  <p style="font-size:0.78rem;color:var(--texto2);margin-top:0.5rem;">Cajas totales = caja inicial + rebuys (mínimo 1)</p>`;
 });
 
 window.guardarCajas = async function() {
@@ -559,7 +561,8 @@ window.guardarCajas = async function() {
   let ok=0, err=0;
   for (const cb of checks) {
     const jid    = cb.dataset.jid;
-    const rebuys = parseInt(document.querySelector(`.c-rebuys[data-jid="${jid}"]`)?.value || 0);
+    const totalCajas = parseInt(document.querySelector(`.c-cajas[data-jid="${jid}"]`)?.value || 1);
+    const rebuys = Math.max(0, totalCajas - 1);
     const addon  = document.querySelector(`.c-addon[data-jid="${jid}"]`)?.checked || false;
     try {
       await sb('cajas', {
