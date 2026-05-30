@@ -129,10 +129,7 @@
           <span class="ico">▦</span> Fechas
         </button>
         <button onclick="showPanel('resultados', this)">
-          <span class="ico">★</span> Resultados
-        </button>
-        <button onclick="showPanel('cajas', this)">
-          <span class="ico">◈</span> Cajas
+          <span class="ico">★</span> Cargar fecha
         </button>
         <button onclick="showPanel('jugadores', this)">
           <span class="ico">◉</span> Jugadores
@@ -153,40 +150,29 @@
           </div>
         </div>
 
-        <!-- RESULTADOS -->
+        <!-- CARGAR FECHA (resultados + cajas juntos) -->
         <div id="panel-resultados" class="admin-panel">
-          <div class="panel-title">Cargar resultados</div>
+          <div class="panel-title">Cargar fecha</div>
           <div class="card" style="margin-bottom:1rem;">
-            <div class="form-group">
-              <label>Fecha</label>
-              <select id="r-fecha"><option value="">— Seleccionar fecha —</option></select>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha</label>
+                <select id="r-fecha"><option value="">— Seleccionar fecha —</option></select>
+              </div>
+              <div class="form-row" style="margin:0;gap:0.75rem;">
+                <div class="form-group" style="margin:0;">
+                  <label>Precio caja ($)</label>
+                  <input type="number" id="c-precio" value="10000" min="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Precio add-on ($)</label>
+                  <input type="number" id="c-precio-addon" value="15000" min="0">
+                </div>
+              </div>
             </div>
-            <div id="r-info" style="font-size:0.82rem;color:var(--texto2);margin-bottom:0.75rem;display:none;"></div>
+            <div id="r-info" style="font-size:0.82rem;color:var(--texto2);margin:0.75rem 0;display:none;"></div>
             <div id="r-lista"></div>
-            <button class="btn btn-primary" onclick="guardarResultados()" style="margin-top:1rem;">Guardar resultados</button>
-          </div>
-        </div>
-
-        <!-- CAJAS -->
-        <div id="panel-cajas" class="admin-panel">
-          <div class="panel-title">Cajas por fecha</div>
-          <div class="card">
-            <div class="form-group">
-              <label>Fecha</label>
-              <select id="c-fecha"><option value="">— Seleccionar fecha —</option></select>
-            </div>
-            <div class="form-row" style="margin-bottom:1rem;">
-              <div class="form-group">
-                <label>Precio caja ($)</label>
-                <input type="number" id="c-precio" value="10000" min="0">
-              </div>
-              <div class="form-group">
-                <label>Precio add-on ($)</label>
-                <input type="number" id="c-precio-addon" value="15000" min="0">
-              </div>
-            </div>
-            <div id="c-lista"></div>
-            <button class="btn btn-primary" onclick="guardarCajas()" style="margin-top:1rem;">Guardar cajas</button>
+            <button class="btn btn-primary" onclick="guardarFecha()" style="margin-top:1rem;">Guardar fecha completa</button>
           </div>
         </div>
 
@@ -419,20 +405,18 @@ window.guardarJugador = async function() {
 
 // ── Poblar selectores ─────────────────────────────────────────
 function poblarSelectores() {
-  // Selectores de fechas (solo pasadas)
-  ['r-fecha','c-fecha'].forEach(selId => {
-    const sel = document.getElementById(selId);
-    const val = sel.value;
-    sel.innerHTML = '<option value="">— Seleccionar fecha —</option>';
-    fechas.forEach(f => {
-      const o = document.createElement('option');
-      o.value = f.id;
-      const fechaLabel = new Date(f.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
-      o.textContent = `${f.nombre}${f.es_doble?' ⚡':''} (${fechaLabel})`;
-      sel.appendChild(o);
-    });
-    if (val) sel.value = val;
+  // Selector de fechas (solo pasadas)
+  const selR = document.getElementById('r-fecha');
+  const valR = selR.value;
+  selR.innerHTML = '<option value="">— Seleccionar fecha —</option>';
+  fechas.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id;
+    const fechaLabel = new Date(f.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+    o.textContent = `${f.nombre}${f.es_doble?' ⚡':''} (${fechaLabel})`;
+    selR.appendChild(o);
   });
+  if (valR) selR.value = valR;
 
   // Selector de fecha en blog
   const bFecha = document.getElementById('b-fecha');
@@ -464,115 +448,114 @@ document.getElementById('r-fecha').addEventListener('change', async function() {
 
   const f = fechas.find(x => x.id === fechaId);
   info.style.display = 'block';
-  info.innerHTML = `<b>${f?.nombre}</b> · Pool: jugadores × 100${f?.es_doble?' × 2 (DOBLE)':''}`;
+  info.innerHTML = `<b>${f?.nombre}</b> · Pool: ${f ? 'jugadores × 100' + (f.es_doble?' × 2 (DOBLE)':'') : ''}`;
 
-  const existentes = await query('resultados', `torneo_id=eq.${fechaId}&select=jugador_id,posicion`);
-  const mapPos = {};
-  existentes.forEach(r => mapPos[r.jugador_id] = r.posicion);
+  // Cargar resultados y cajas existentes
+  const [existRes, existCaj] = await Promise.all([
+    query('resultados', `torneo_id=eq.${fechaId}&select=jugador_id,posicion&order=posicion.asc`),
+    query('cajas',      `torneo_id=eq.${fechaId}&select=jugador_id,buyin,rebuys,addon`)
+  ]);
 
-  cont.innerHTML = `<table class="check-tabla">
-    <thead><tr>
-      <th>Jugador</th>
-      <th style="text-align:center;width:60px;">Jugó</th>
-      <th style="text-align:center;width:80px;">Posición</th>
-    </tr></thead>
-    <tbody>
-      ${jugadores.map(j => `<tr>
-        <td>${j.apodo || j.nombre}</td>
-        <td style="text-align:center;">
-          <input type="checkbox" data-jid="${j.id}" class="r-jugo" ${mapPos[j.id]!==undefined?'checked':''}>
-        </td>
-        <td style="text-align:center;">
-          <input type="number" data-jid="${j.id}" class="r-pos" min="0" max="100"
-            placeholder="—" value="${mapPos[j.id]??''}">
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table>
-  <p style="font-size:0.78rem;color:var(--texto2);margin-top:0.5rem;">Posición 0 = presencia (jugó sin llegar al top 10)</p>`;
-});
+  const mapPos  = {};
+  existRes.forEach(r => mapPos[r.jugador_id] = r.posicion);
+  const mapCaj  = {};
+  existCaj.forEach(c => mapCaj[c.jugador_id] = c);
 
-window.guardarResultados = async function() {
-  const fechaId = document.getElementById('r-fecha').value;
-  if (!fechaId) { toast('Seleccioná una fecha', 'err'); return; }
-  const checks = document.querySelectorAll('.r-jugo:checked');
-  if (!checks.length) { toast('Marcá al menos un jugador', 'err'); return; }
-  let ok=0, err=0;
-  for (const cb of checks) {
-    const jid = cb.dataset.jid;
-    const posEl = document.querySelector(`.r-pos[data-jid="${jid}"]`);
-    const pos = posEl?.value !== '' ? parseInt(posEl.value) : 0;
-    try {
-      await sb('resultados', { torneo_id: fechaId, jugador_id: jid, posicion: pos, pool_total: 0, puntos_ganados: 0 });
-      ok++;
-    } catch { err++; }
+  const hayDatos = existRes.length > 0;
+
+  // Ordenar jugadores:
+  // Si hay datos: primero los posicionados (1°,2°...), luego presencia (0), luego los que no jugaron
+  // Si no hay datos: orden por partidos jugados (ya viene así en jugadores[])
+  let ordenados;
+  if (hayDatos) {
+    const jugaron    = jugadores.filter(j => mapPos[j.id] !== undefined)
+                                .sort((a,b) => {
+                                  const pa = mapPos[a.id], pb = mapPos[b.id];
+                                  if (pa === 0 && pb === 0) return 0;
+                                  if (pa === 0) return 1;
+                                  if (pb === 0) return -1;
+                                  return pa - pb;
+                                });
+    const noJugaron  = jugadores.filter(j => mapPos[j.id] === undefined);
+    ordenados = [...jugaron, ...noJugaron];
+  } else {
+    ordenados = [...jugadores];
   }
-  toast(err ? `${ok} guardados, ${err} errores` : `${ok} resultados guardados ✓`, err?'err':'ok');
-};
 
-// ── CAJAS ─────────────────────────────────────────────────────
-document.getElementById('c-fecha').addEventListener('change', async function() {
-  const fechaId = this.value;
-  const cont = document.getElementById('c-lista');
-  if (!fechaId) { cont.innerHTML = ''; return; }
-
-  const existentes = await query('cajas', `torneo_id=eq.${fechaId}&select=jugador_id,buyin,rebuys,addon`);
-  const mapC = {};
-  existentes.forEach(c => mapC[c.jugador_id] = c);
-
-  cont.innerHTML = `<table class="check-tabla">
-    <thead><tr>
-      <th>Jugador</th>
-      <th style="text-align:center;width:55px;">Jugó</th>
-      <th style="text-align:center;width:80px;">Cajas totales</th>
-      <th style="text-align:center;width:65px;">Add-on</th>
-    </tr></thead>
-    <tbody>
-      ${jugadores.map(j => {
-        const c = mapC[j.id];
-        const totalCajas = c ? (c.buyin + c.rebuys) : 1;
-        return `<tr>
-          <td>${j.apodo || j.nombre}</td>
-          <td style="text-align:center;">
-            <input type="checkbox" data-jid="${j.id}" class="c-jugo" ${c?'checked':''}>
-          </td>
-          <td style="text-align:center;">
-            <input type="number" data-jid="${j.id}" class="c-cajas" min="1" max="30"
-              placeholder="1" value="${c ? totalCajas : 1}">
-          </td>
-          <td style="text-align:center;">
-            <input type="checkbox" data-jid="${j.id}" class="c-addon" ${c?.addon?'checked':''}>
-          </td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>
-  <p style="font-size:0.78rem;color:var(--texto2);margin-top:0.5rem;">Cajas totales = caja inicial + rebuys (mínimo 1)</p>`;
+  cont.innerHTML = `
+    <table class="check-tabla">
+      <thead><tr>
+        <th>Jugador</th>
+        <th style="text-align:center;width:50px;">Jugó</th>
+        <th style="text-align:center;width:75px;">Posición</th>
+        <th style="text-align:center;width:75px;">Cajas</th>
+        <th style="text-align:center;width:65px;">Add-on</th>
+      </tr></thead>
+      <tbody>
+        ${ordenados.map(j => {
+          const pos   = mapPos[j.id];
+          const caja  = mapCaj[j.id];
+          const jugo  = pos !== undefined || caja !== undefined;
+          const totalCajas = caja ? (caja.buyin + caja.rebuys) : 1;
+          // Add-on: checked by default para nuevos; usar dato existente si ya está cargado
+          const addonChecked = caja ? caja.addon : true;
+          return `<tr>
+            <td style="font-weight:${pos>0?'600':'400'}">${j.apodo || j.nombre}</td>
+            <td style="text-align:center;">
+              <input type="checkbox" data-jid="${j.id}" class="r-jugo" ${jugo?'checked':''}>
+            </td>
+            <td style="text-align:center;">
+              <input type="number" data-jid="${j.id}" class="r-pos" min="0" max="100"
+                placeholder="—" value="${pos??''}">
+            </td>
+            <td style="text-align:center;">
+              <input type="number" data-jid="${j.id}" class="c-cajas" min="1" max="30"
+                value="${totalCajas}">
+            </td>
+            <td style="text-align:center;">
+              <input type="checkbox" data-jid="${j.id}" class="c-addon" ${addonChecked?'checked':''}>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <p style="font-size:0.78rem;color:var(--texto2);margin-top:0.5rem;">
+      Posición 0 = presencia · Cajas = total incluyendo inicial · Add-on chequeado por defecto
+    </p>`;
 });
 
-window.guardarCajas = async function() {
-  const fechaId = document.getElementById('c-fecha').value;
+window.guardarFecha = async function() {
+  const fechaId  = document.getElementById('r-fecha').value;
   if (!fechaId) { toast('Seleccioná una fecha', 'err'); return; }
-  const checks = document.querySelectorAll('.c-jugo:checked');
+  const checks   = document.querySelectorAll('.r-jugo:checked');
   if (!checks.length) { toast('Marcá al menos un jugador', 'err'); return; }
   const precioCaja  = Number(document.getElementById('c-precio').value) || 10000;
   const precioAddon = Number(document.getElementById('c-precio-addon').value) || 15000;
-  let ok=0, err=0;
+
+  let okR=0, errR=0, okC=0, errC=0;
   for (const cb of checks) {
-    const jid    = cb.dataset.jid;
+    const jid  = cb.dataset.jid;
+    const posEl = document.querySelector(`.r-pos[data-jid="${jid}"]`);
+    const pos   = posEl?.value !== '' ? parseInt(posEl.value) : 0;
     const totalCajas = parseInt(document.querySelector(`.c-cajas[data-jid="${jid}"]`)?.value || 1);
-    const rebuys = Math.max(0, totalCajas - 1);
-    const addon  = document.querySelector(`.c-addon[data-jid="${jid}"]`)?.checked || false;
+    const rebuys     = Math.max(0, totalCajas - 1);
+    const addon      = document.querySelector(`.c-addon[data-jid="${jid}"]`)?.checked || false;
+
+    // Guardar resultado
     try {
-      await sb('cajas', {
-        torneo_id: fechaId, jugador_id: jid,
-        buyin: 1, rebuys, addon,
-        monto_caja: precioCaja, monto_addon: precioAddon
-      });
-      ok++;
-    } catch { err++; }
+      await sb('resultados', { torneo_id: fechaId, jugador_id: jid, posicion: pos, pool_total: 0, puntos_ganados: 0 });
+      okR++;
+    } catch { errR++; }
+
+    // Guardar caja
+    try {
+      await sb('cajas', { torneo_id: fechaId, jugador_id: jid, buyin: 1, rebuys, addon, monto_caja: precioCaja, monto_addon: precioAddon });
+      okC++;
+    } catch { errC++; }
   }
-  toast(err ? `${ok} guardadas, ${err} errores` : `${ok} cajas guardadas ✓`, err?'err':'ok');
+
+  const errTotal = errR + errC;
+  toast(errTotal ? `${okR} resultados y ${okC} cajas guardados (${errTotal} errores)` : `${okR} resultados y ${okC} cajas guardados ✓`, errTotal?'err':'ok');
 };
 
 // ── BLOG ──────────────────────────────────────────────────────
