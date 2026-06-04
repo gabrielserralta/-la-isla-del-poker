@@ -34,7 +34,7 @@
       transition: opacity 0.25s;
     }
     .lightbox.open { opacity: 1; pointer-events: all; }
-    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; transition: opacity 0.25s; }
     .lightbox-close {
       position: fixed; top: 1rem; right: 1.5rem;
       font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none;
@@ -77,7 +77,7 @@
   <div id="galeria" class="galeria-grid"><div class="loading" style="grid-column:1/-1;"></div></div>
 </main>
 
-<div class="lightbox" id="lightbox" onclick="cerrarLightbox()">
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)cerrarLightbox()">
   <button class="lightbox-close" onclick="cerrarLightbox()">×</button>
   <img id="lightbox-img" src="" alt="">
 </div>
@@ -124,8 +124,13 @@ window.filtrar = function(cat) {
 };
 
 window.abrirLightbox = function(url) {
-  document.getElementById('lightbox-img').src = url;
-  document.getElementById('lightbox').classList.add('open');
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  img.style.opacity = '0';
+  img.src = url;
+  lb.classList.add('open');
+  img.onload = () => { img.style.opacity = '1'; };
+  img.onerror = () => { lb.classList.remove('open'); };
 };
 
 window.cerrarLightbox = function() {
