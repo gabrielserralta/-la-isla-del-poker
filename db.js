@@ -61,24 +61,39 @@ export function setLoading(el, show) {
   if (show) el.innerHTML = '<div class="loading"></div>';
 }
 
-// ── Auth admin (PIN hardcodeado en localStorage) ──────────────
-const ADMIN_PIN = 'ISLA2025';  // cambiar después
+
+// ── Sesión de usuario ─────────────────────────────────────────
+export function getSesion() {
+  const s = sessionStorage.getItem('isla_sesion');
+  return s ? JSON.parse(s) : null;
+}
+
+export function requireLogin() {
+  if (!getSesion()) {
+    window.location.href = 'login.html';
+    return false;
+  }
+  return true;
+}
 
 export function isAdmin() {
-  return sessionStorage.getItem('isla_admin') === 'ok';
+  const s = getSesion();
+  return s?.tipo === 'admin';
 }
 
 export function loginAdmin(pin) {
+  const ADMIN_PIN = 'ISLA2025';
   if (pin === ADMIN_PIN) {
-    sessionStorage.setItem('isla_admin', 'ok');
+    sessionStorage.setItem('isla_sesion', JSON.stringify({ tipo: 'admin', nombre: 'Admin' }));
     return true;
   }
   return false;
 }
 
 export function logoutAdmin() {
-  sessionStorage.removeItem('isla_admin');
+  sessionStorage.removeItem('isla_sesion');
 }
+
 
 // ── Nav activo ────────────────────────────────────────────────
 export function marcarNavActivo() {

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Isla del Poker — Acceso</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .login-card {
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 14px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: var(--sombra);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-logo .suit { font-size: 3rem; display:block; margin-bottom: 0.5rem; }
+    .login-logo h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--oro);
+      margin: 0;
+    }
+    .login-logo h1 span { color: var(--verde-claro); }
+    .login-logo p { color: var(--texto2); font-size: 0.85rem; margin-top: 0.3rem; }
+    .error-msg {
+      color: #e06060;
+      font-size: 0.82rem;
+      margin-top: 0.75rem;
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo">
+    <span class="suit">♠</span>
+    <h1>La Isla <span>del Poker</span></h1>
+    <p>Ingresá con tu nombre y PIN</p>
+  </div>
+
+  <div class="form-group">
+    <label>Jugador</label>
+    <select id="sel-jugador">
+      <option value="">— Seleccioná tu nombre —</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>PIN</label>
+    <input type="password" id="inp-pin" placeholder="••••••" autocomplete="off" maxlength="12">
+  </div>
+
+  <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;" onclick="doLogin()">
+    Entrar
+  </button>
+
+  <p class="error-msg" id="error-msg">PIN incorrecto. Intentá de nuevo.</p>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+const SUPABASE_URL = 'https://wdqjtnwmlnvnkfczkceu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkcWp0bndtbG52bmtmY3prY2V1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMTQzMjUsImV4cCI6MjA5NDc5MDMyNX0.-rxWJeZuHuvhQHUMxvhkxi65uDbCWfZamXpn6hdAACE';
+const ADMIN_PIN = 'ISLA2025';
+
+// Si ya está logueado, redirigir
+const sesion = sessionStorage.getItem('isla_sesion');
+if (sesion) {
+  window.location.href = 'index.html';
+}
+
+// Cargar jugadores
+async function cargarJugadores() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jugadores?activo=eq.true&order=nombre.asc&select=id,nombre,apodo,pin_hash`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  const jugadores = await res.json();
+  const sel = document.getElementById('sel-jugador');
+
+  // Opción admin
+  const optAdmin = document.createElement('option');
+  optAdmin.value = '__admin__';
+  optAdmin.textContent = '⚙ Administrador';
+  sel.appendChild(optAdmin);
+
+  // Separador
+  const sep = document.createElement('option');
+  sep.disabled = true;
+  sep.textContent = '──────────────';
+  sel.appendChild(sep);
+
+  jugadores.forEach(j => {
+    const opt = document.createElement('option');
+    opt.value = JSON.stringify({ id: j.id, nombre: j.nombre, apodo: j.apodo, pin: j.pin_hash });
+    opt.textContent = j.apodo || j.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+window.doLogin = function() {
+  const sel   = document.getElementById('sel-jugador');
+  const pin   = document.getElementById('inp-pin').value.trim().toUpperCase();
+  const errEl = document.getElementById('error-msg');
+  errEl.style.display = 'none';
+
+  if (!sel.value) {
+    errEl.textContent = 'Seleccioná tu nombre primero.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Login admin
+  if (sel.value === '__admin__') {
+    if (pin === ADMIN_PIN) {
+      sessionStorage.setItem('isla_sesion', JSON.stringify({ tipo: 'admin', nombre: 'Admin' }));
+      window.location.href = 'index.html';
+    } else {
+      errEl.textContent = 'PIN de administrador incorrecto.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  // Login jugador
+  const jugador = JSON.parse(sel.value);
+  if (pin === jugador.pin?.toUpperCase()) {
+    sessionStorage.setItem('isla_sesion', JSON.stringify({
+      tipo: 'jugador',
+      id: jugador.id,
+      nombre: jugador.nombre,
+      apodo: jugador.apodo
+    }));
+    window.location.href = 'index.html';
+  } else {
+    errEl.textContent = 'PIN incorrecto. Intentá de nuevo.';
+    errEl.style.display = 'block';
+  }
+};
+
+document.getElementById('inp-pin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+cargarJugadores();
+</script>
+
+</body>
+</html>
