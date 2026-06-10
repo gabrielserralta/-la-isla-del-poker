@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+    // Verificación de sesión - bloquea el render si no está logueado
+    (function() {
+      var s = sessionStorage.getItem('isla_sesion');
+      if (!s) { window.location.replace('login.html'); }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Isla del Poker</title>
@@ -70,8 +77,12 @@
     <li><a href="stats.html">Estadísticas</a></li>
     <li><a href="galeria.html">Galería</a></li>
     <li><a href="blog.html">Blog</a></li>
-    <li><a href="admin.html">Admin</a></li>
+    <li id="nav-admin-li" style="display:none;"><a href="admin.html">Admin</a></li>
   </ul>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <span id="nav-usuario" style="font-size:0.8rem;color:var(--texto2);"></span>
+    <button onclick="salirSesion()" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.75rem;">Salir</button>
+  </div>
 </nav>
 
 <section class="hero">
@@ -192,9 +203,10 @@
 <div id="toast"></div>
 
 <script type="module">
-import { query, formatFecha, formatNum, marcarNavActivo } from './db.js';
+import { requireLogin, getSesion, query, formatFecha, formatNum, marcarNavActivo } from './db.js';
 
-marcarNavActivo();
+requireLogin();
+  marcarNavActivo();
 const anio = new Date().getFullYear();
 
 // Detectar temporada actual

@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+    // Verificación de sesión - bloquea el render si no está logueado
+    (function() {
+      var s = sessionStorage.getItem('isla_sesion');
+      if (!s) { window.location.replace('login.html'); }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Galería · La Isla del Poker</title>
@@ -34,7 +41,7 @@
       transition: opacity 0.25s;
     }
     .lightbox.open { opacity: 1; pointer-events: all; }
-    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+    .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; transition: opacity 0.25s; }
     .lightbox-close {
       position: fixed; top: 1rem; right: 1.5rem;
       font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none;
@@ -51,8 +58,12 @@
     <li><a href="stats.html">Estadísticas</a></li>
     <li><a href="galeria.html">Galería</a></li>
     <li><a href="blog.html">Blog</a></li>
-    <li><a href="admin.html">Admin</a></li>
+    <li id="nav-admin-li" style="display:none;"><a href="admin.html">Admin</a></li>
   </ul>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <span id="nav-usuario" style="font-size:0.8rem;color:var(--texto2);"></span>
+    <button onclick="salirSesion()" class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.75rem;">Salir</button>
+  </div>
 </nav>
 
 <div class="page-header">
@@ -77,7 +88,7 @@
   <div id="galeria" class="galeria-grid"><div class="loading" style="grid-column:1/-1;"></div></div>
 </main>
 
-<div class="lightbox" id="lightbox" onclick="cerrarLightbox()">
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)cerrarLightbox()">
   <button class="lightbox-close" onclick="cerrarLightbox()">×</button>
   <img id="lightbox-img" src="" alt="">
 </div>
@@ -86,8 +97,9 @@
 <div id="toast"></div>
 
 <script type="module">
-import { query, marcarNavActivo } from './db.js';
-marcarNavActivo();
+import { requireLogin, getSesion, query, marcarNavActivo } from './db.js';
+requireLogin();
+  marcarNavActivo();
 
 let todasLasFotos = [];
 
@@ -124,8 +136,13 @@ window.filtrar = function(cat) {
 };
 
 window.abrirLightbox = function(url) {
-  document.getElementById('lightbox-img').src = url;
-  document.getElementById('lightbox').classList.add('open');
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  img.style.opacity = '0';
+  img.src = url;
+  lb.classList.add('open');
+  img.onload = () => { img.style.opacity = '1'; };
+  img.onerror = () => { lb.classList.remove('open'); };
 };
 
 window.cerrarLightbox = function() {
